@@ -7,7 +7,7 @@ import TargetPage from './pages/TargetPage';
 
 const App: React.FC = () => {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/agentprobe">
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/configure" element={<Configure />} />
