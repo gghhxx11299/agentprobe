@@ -13,3 +13,12 @@ services:
         value: sqlite:///./agentprobe.db
       - key: GITHUB_PAGES_URL
         sync: false
+
+  - type: static
+    name: agentprobe-frontend
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishDir: dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false

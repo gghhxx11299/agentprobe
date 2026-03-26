@@ -48,7 +48,7 @@ async def startup_event():
 
 @app.get("/test/{session_id}", response_class=HTMLResponse)
 async def get_test_page(session_id: str, request: Request):
-    from trap_engine.traps import render_archetype
+    from trap_engine import render_archetype
     from database import SessionLocal
     from models import Session as SessionModel
     import json
