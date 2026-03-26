@@ -16,22 +16,21 @@ app = FastAPI(title="AgentProbe API")
 
 # CORS configuration - allow localhost and production URLs
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+GITHUB_PAGES_URL = os.getenv("GITHUB_PAGES_URL", "https://gghhxx11299.github.io")
+
 ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:3000",
     FRONTEND_URL,
+    GITHUB_PAGES_URL,
+    "https://gghhxx11299.github.io",
 ]
-
-# Add GitHub Pages URL if set
-GITHUB_PAGES_URL = os.getenv("GITHUB_PAGES_URL")
-if GITHUB_PAGES_URL:
-    ALLOWED_ORIGINS.append(GITHUB_PAGES_URL)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
 )
 
