@@ -1,4 +1,4 @@
-from .traps import inject_traps, BASE_URL
+from ..traps import inject_traps, BASE_URL
 
 
 def render_banking(session_id: str, selected_traps: list) -> str:
