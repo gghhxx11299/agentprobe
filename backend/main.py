@@ -21,9 +21,9 @@ GITHUB_PAGES_URL = os.getenv("GITHUB_PAGES_URL", "https://gghhxx11299.github.io"
 ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:3000",
+    "https://gghhxx11299.github.io",
     FRONTEND_URL,
     GITHUB_PAGES_URL,
-    "https://gghhxx11299.github.io",
 ]
 
 app.add_middleware(
@@ -33,6 +33,17 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
 )
+
+# Custom middleware to allow GitHub Pages subdomains dynamically
+@app.middleware("http")
+async def allow_github_pages(request, call_next):
+    origin = request.headers.get("origin", "")
+    if origin.endswith(".github.io"):
+        request.scope["headers"].append((b"origin", origin.encode()))
+    response = await call_next(request)
+    if origin.endswith(".github.io"):
+        response.headers["Access-Control-Allow-Origin"] = origin
+    return response
 
 # Include routers
 app.include_router(sessions.router, prefix="/session", tags=["sessions"])

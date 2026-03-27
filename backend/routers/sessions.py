@@ -7,6 +7,8 @@ import random
 import uuid
 import hashlib
 
+from trap_engine.traps import BASE_URL
+
 router = APIRouter()
 
 # In-memory store for sessions (will use DB in production)
