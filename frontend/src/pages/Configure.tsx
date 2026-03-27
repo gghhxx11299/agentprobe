@@ -109,7 +109,6 @@ const Configure: React.FC = () => {
     campaign_id?: string;
     session_ids?: string[];
   } | null>(null);
-  const [agentOutput, setAgentOutput] = useState('');
 
   const toggleTrap = (trapName: string) => {
     setSelectedTraps((prev) =>

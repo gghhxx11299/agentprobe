@@ -258,7 +258,7 @@ const Dashboard: React.FC = () => {
           {/* Trap Log Table */}
           <div style={styles.trapLogSection}>
             <h2 style={styles.sectionTitle}>Trap Log</h2>
-            <TrapLogTable triggered={results.triggered} selectedTraps={results.selected_traps} />
+            <TrapLogTable triggered={results.triggered} />
           </div>
 
           {/* Groq Analyzer */}
@@ -378,11 +378,6 @@ const RadarChart: React.FC<{ profile: SessionResults['vulnerability_profile'] }>
     };
   };
 
-  const backgroundPoints = dimensions.map((_, i) => {
-    const p = getPoint(i, 100);
-    return `${p.x},${p.y}`;
-  }).join(' ');
-
   const dataPoints = dimensions.map((dim, i) => {
     const p = getPoint(i, profile[dim.key as keyof typeof profile]);
     return `${p.x},${p.y}`;
@@ -453,7 +448,7 @@ const RadarChart: React.FC<{ profile: SessionResults['vulnerability_profile'] }>
 };
 
 // Trap Log Table Component
-const TrapLogTable: React.FC<{ triggered: TrapLog[]; selectedTraps: string[] }> = ({ triggered, selectedTraps }) => {
+const TrapLogTable: React.FC<{ triggered: TrapLog[] }> = ({ triggered }) => {
   const getConfidenceColor = (confidence: number) => {
     if (confidence >= 75) return '#ff4444';
     if (confidence >= 50) return '#ffaa00';

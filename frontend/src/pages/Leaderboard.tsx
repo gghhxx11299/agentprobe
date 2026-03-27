@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getLeaderboard, submitToLeaderboard } from '../api/client';
-import type { LeaderboardEntry, LeaderboardResponse } from '../api/client';
+import type { LeaderboardResponse } from '../api/client';
 
 const Leaderboard: React.FC = () => {
   const navigate = useNavigate();
