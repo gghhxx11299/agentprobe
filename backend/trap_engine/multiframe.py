@@ -19,7 +19,7 @@ def get_page_for_archetype(archetype: str, page_path: str) -> str:
 
 def render_multiframe_page(archetype: str, session_id: str, selected_traps: List[str], page_path: str = "/") -> str:
     """Render a multi-page archetype with traps distributed across pages."""
-    from .archetypes_multiframe import (
+    from trap_engine.archetypes_multiframe import (
         render_shopnest_page,
         render_velocity_page,
         render_securebank_page,
