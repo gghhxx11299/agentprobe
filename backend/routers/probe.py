@@ -99,7 +99,14 @@ def get_trap_name(ref: str, src: str) -> Optional[str]:
     return URL_TO_TRAP.get((ref, src))
 
 
-def log_trap(session_id: str, trap_type: str, user_agent: Optional[str] = None):
+def log_trap(
+    session_id: str, 
+    trap_type: str, 
+    user_agent: Optional[str] = None,
+    confidence: int = 100,
+    trigger_type: str = "load",
+    time_to_trigger: int = 0
+):
     from database import SessionLocal
     from models import TrapLog
 
@@ -107,16 +114,30 @@ def log_trap(session_id: str, trap_type: str, user_agent: Optional[str] = None):
 
     db = SessionLocal()
     try:
-        trap_log = TrapLog(
-            session_id=session_id,
-            trap_type=trap_type,
-            tier=info["tier"],
-            severity=info["severity"],
-            triggered_at=datetime.utcnow(),
-            user_agent=user_agent
-        )
-        db.add(trap_log)
-        db.commit()
+        # Check if this trap was already logged for this session
+        existing = db.query(TrapLog).filter(
+            TrapLog.session_id == session_id,
+            TrapLog.trap_type == trap_type
+        ).first()
+        
+        if existing:
+            # Update count only, don't duplicate
+            existing.count = getattr(existing, 'count', 1) + 1
+            db.commit()
+        else:
+            trap_log = TrapLog(
+                session_id=session_id,
+                trap_type=trap_type,
+                tier=info["tier"],
+                severity=info["severity"],
+                triggered_at=datetime.utcnow(),
+                user_agent=user_agent,
+                confidence=confidence,
+                trigger_type=trigger_type,
+                time_to_trigger=time_to_trigger
+            )
+            db.add(trap_log)
+            db.commit()
     finally:
         db.close()
 
@@ -128,7 +149,10 @@ async def probe_evt(
     session_id: str,
     request: Request,
     ref: str = Query(...),
-    src: str = Query(...)
+    src: str = Query(...),
+    confidence: Optional[int] = Query(None),
+    trigger: Optional[str] = Query(None),
+    time: Optional[int] = Query(None)
 ):
     """Disguised analytics endpoint - maps ref+src to trap name."""
     trap_type = get_trap_name(ref, src)
@@ -136,7 +160,13 @@ async def probe_evt(
         return JSONResponse(content={"status": "ok"}, status_code=200)
 
     user_agent = request.headers.get("user-agent")
-    log_trap(session_id, trap_type, user_agent)
+    
+    # Use provided values or defaults
+    conf = confidence if confidence is not None else 100
+    trig = trigger if trigger else "load"
+    ttf = time if time is not None else 0
+    
+    log_trap(session_id, trap_type, user_agent, conf, trig, ttf)
 
     # Return transparent PNG for image requests
     accept_header = request.headers.get("accept", "")
@@ -152,7 +182,10 @@ async def probe_evt_post(
     session_id: str,
     request: Request,
     ref: str = Query(...),
-    src: str = Query(...)
+    src: str = Query(...),
+    confidence: Optional[int] = Query(None),
+    trigger: Optional[str] = Query(None),
+    time: Optional[int] = Query(None)
 ):
     """Disguised analytics endpoint (POST)."""
     trap_type = get_trap_name(ref, src)
@@ -160,7 +193,12 @@ async def probe_evt_post(
         return JSONResponse(content={"status": "ok"}, status_code=200)
 
     user_agent = request.headers.get("user-agent")
-    log_trap(session_id, trap_type, user_agent)
+    
+    conf = confidence if confidence is not None else 100
+    trig = trigger if trigger else "interaction"
+    ttf = time if time is not None else 0
+    
+    log_trap(session_id, trap_type, user_agent, conf, trig, ttf)
     return JSONResponse(content={"status": "ok"})
 
 

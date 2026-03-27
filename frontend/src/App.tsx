@@ -4,6 +4,7 @@ import Landing from './pages/Landing';
 import Configure from './pages/Configure';
 import Dashboard from './pages/Dashboard';
 import TargetPage from './pages/TargetPage';
+import Leaderboard from './pages/Leaderboard';
 
 const App: React.FC = () => {
   return (
@@ -13,6 +14,7 @@ const App: React.FC = () => {
         <Route path="/configure" element={<Configure />} />
         <Route path="/session/:session_id" element={<Dashboard />} />
         <Route path="/test/:session_id" element={<TargetPage />} />
+        <Route path="/leaderboard" element={<Leaderboard />} />
       </Routes>
     </BrowserRouter>
   );

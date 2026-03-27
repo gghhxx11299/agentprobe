@@ -10,8 +10,16 @@ const Landing: React.FC = () => {
         <header style={styles.header}>
           <div style={styles.logo}>
             <span style={styles.logoIcon}>🔍</span>
-            AgentProbe
+            AgentProbe <span style={styles.versionBadge}>v2</span>
           </div>
+          <nav style={styles.nav}>
+            <a href="#" style={styles.navLink} onClick={(e) => { e.preventDefault(); navigate('/leaderboard'); }}>
+              Leaderboard
+            </a>
+            <a href="#" style={styles.navLink} onClick={(e) => { e.preventDefault(); navigate('/configure'); }}>
+              Start Test
+            </a>
+          </nav>
         </header>
 
         <main style={styles.main}>
@@ -19,21 +27,53 @@ const Landing: React.FC = () => {
             Test Your AI Agent Against the Real Web
           </h1>
           <p style={styles.subheadline}>
-            AgentProbe generates convincing fake websites embedded with 30 adversarial traps 
+            AgentProbe generates convincing fake websites embedded with 30 adversarial traps
             to measure whether your AI agent can be manipulated.
           </p>
 
-          <button style={styles.ctaButton} onClick={() => navigate('/configure')}>
-            Start a Test Session →
-          </button>
+          <div style={styles.buttonRow}>
+            <button style={styles.ctaButton} onClick={() => navigate('/configure')}>
+              Start a Test Session →
+            </button>
+            <button style={styles.secondaryButton} onClick={() => navigate('/leaderboard')}>
+              🏆 View Leaderboard
+            </button>
+          </div>
 
           <div style={styles.features}>
             <div style={styles.featureCard}>
               <div style={styles.featureIcon}>🎯</div>
-              <h3 style={styles.featureTitle}>30 Trap Types</h3>
+              <h3 style={styles.featureTitle}>4 Session Modes</h3>
               <p style={styles.featureDescription}>
-                From hidden text injections to authority spoofing, test against 
-                comprehensive adversarial techniques.
+                Shotgun (full scan), Sniper (single trap), Campaign (5 sessions), 
+                or Blind (randomized) testing modes for different analysis needs.
+              </p>
+            </div>
+
+            <div style={styles.featureCard}>
+              <div style={styles.featureIcon}>🧠</div>
+              <h3 style={styles.featureTitle}>Behavioral Triggers</h3>
+              <p style={styles.featureDescription}>
+                Traps fire based on actual agent behavior — scroll depth, form 
+                engagement, navigation, and time spent — not just page load.
+              </p>
+            </div>
+
+            <div style={styles.featureCard}>
+              <div style={styles.featureIcon}>📊</div>
+              <h3 style={styles.featureTitle}>Vulnerability Radar</h3>
+              <p style={styles.featureDescription}>
+                7-dimensional vulnerability profile showing exactly where your 
+                agent is weak: instruction resistance, authority calibration, and more.
+              </p>
+            </div>
+
+            <div style={styles.featureCard}>
+              <div style={styles.featureIcon}>🤖</div>
+              <h3 style={styles.featureTitle}>Groq AI Analysis</h3>
+              <p style={styles.featureDescription}>
+                Paste your agent's output for Llama3-powered analysis of response 
+                mode, self-awareness, and specific recommendations.
               </p>
             </div>
 
@@ -41,17 +81,17 @@ const Landing: React.FC = () => {
               <div style={styles.featureIcon}>🏗</div>
               <h3 style={styles.featureTitle}>4 Site Archetypes</h3>
               <p style={styles.featureDescription}>
-                E-commerce, SaaS dashboards, banking portals, and government 
-                sites — all convincingly realistic.
+                E-commerce, SaaS dashboards, banking portals, and government
+                sites — all convincingly realistic with disguised traps.
               </p>
             </div>
 
             <div style={styles.featureCard}>
-              <div style={styles.featureIcon}>⚡</div>
-              <h3 style={styles.featureTitle}>Real-Time Results</h3>
+              <div style={styles.featureIcon}>🏆</div>
+              <h3 style={styles.featureTitle}>Community Leaderboard</h3>
               <p style={styles.featureDescription}>
-                Watch traps fire live in your dashboard with instant scoring 
-                and detailed breakdown reports.
+                Compare your agent's resilience against others. See which 
+                frameworks perform best across different trap categories.
               </p>
             </div>
           </div>
@@ -59,7 +99,7 @@ const Landing: React.FC = () => {
 
         <footer style={styles.footer}>
           <p style={styles.footerText}>
-            Built for developers testing AI browser agents — Gemini, Claude, GPT-4o, 
+            Built for developers testing AI browser agents — Gemini, Claude, GPT-4o,
             browser-use, AutoGPT, and more.
           </p>
         </footer>
@@ -81,6 +121,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: '0 40px',
   },
   header: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     padding: '24px 0',
     borderBottom: '1px solid #1e1e2e',
   },
@@ -94,6 +137,25 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   logoIcon: {
     fontSize: '28px',
+  },
+  versionBadge: {
+    background: '#6366f1',
+    color: 'white',
+    padding: '2px 8px',
+    borderRadius: '4px',
+    fontSize: '12px',
+    fontWeight: '600',
+  },
+  nav: {
+    display: 'flex',
+    gap: '24px',
+  },
+  navLink: {
+    color: '#888899',
+    textDecoration: 'none',
+    fontSize: '14px',
+    fontWeight: '500',
+    transition: 'color 0.2s',
   },
   main: {
     padding: '80px 0',
@@ -116,6 +178,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     margin: '0 auto 48px',
     lineHeight: '1.6',
   },
+  buttonRow: {
+    display: 'flex',
+    gap: '16px',
+    justifyContent: 'center',
+    marginBottom: '80px',
+  },
   ctaButton: {
     background: 'linear-gradient(135deg, #00ff88, #00cc66)',
     color: '#0a0a0f',
@@ -126,7 +194,17 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: '8px',
     cursor: 'pointer',
     transition: 'transform 0.2s, box-shadow 0.2s',
-    marginBottom: '80px',
+  },
+  secondaryButton: {
+    background: '#1e1e2e',
+    color: '#f0f0f0',
+    border: 'none',
+    padding: '18px 48px',
+    fontSize: '18px',
+    fontWeight: '600',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'transform 0.2s, box-shadow 0.2s',
   },
   features: {
     display: 'grid',
@@ -159,6 +237,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: '40px 0',
     borderTop: '1px solid #1e1e2e',
     textAlign: 'center',
+    marginTop: '80px',
   },
   footerText: {
     fontSize: '14px',

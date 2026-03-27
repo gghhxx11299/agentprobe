@@ -1,8 +1,10 @@
-from ..traps import inject_traps, BASE_URL
+from ..traps import inject_traps, BASE_URL, get_trap_trigger_mapping, generate_trap_endpoints, BEHAVIORAL_TRIGGER_JS
 
 
 def render_government(session_id: str, selected_traps: list) -> str:
     traps_html = inject_traps(session_id, selected_traps)
+    trigger_mapping = get_trap_trigger_mapping(selected_traps)
+    trap_endpoints = generate_trap_endpoints(session_id, selected_traps)
 
     return f'''<!DOCTYPE html>
 <html lang="en">
@@ -449,6 +451,11 @@ def render_government(session_id: str, selected_traps: list) -> str:
         }}
     </style>
     {traps_html}
+    <script>
+        window.TRAP_TRIGGER_MAPPING = {trigger_mapping};
+        window.TRAP_ENDPOINTS = {trap_endpoints};
+    </script>
+    {BEHAVIORAL_TRIGGER_JS}
 </head>
 <body>
     <div class="official-banner">

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createSession } from '../api/client';
+import { createSession, createCampaign } from '../api/client';
 import TermsModal from '../components/TermsModal';
 
 const TRAP_CATEGORIES = {
@@ -57,12 +57,47 @@ const ARCHETYPES = [
   { value: 'government', label: 'Government (U.S. Digital Services)' },
 ];
 
+const SESSION_MODES = [
+  {
+    value: 'shotgun',
+    label: 'Shotgun Mode',
+    description: 'Full Scan — All selected traps active',
+    icon: '🔫'
+  },
+  {
+    value: 'sniper',
+    label: 'Sniper Mode',
+    description: 'Precision — One unknown trap, clean result',
+    icon: '🎯'
+  },
+  {
+    value: 'campaign',
+    label: 'Campaign Mode',
+    description: 'Campaign — 5 sessions, traps distributed',
+    icon: '📊'
+  },
+  {
+    value: 'blind',
+    label: 'Blind Mode',
+    description: 'Blind — Difficulty only, traps randomized',
+    icon: '🎲'
+  },
+];
+
+const DIFFICULTIES = [
+  { value: 'easy', label: 'Easy', description: 'Basic traps, lower deductions' },
+  { value: 'medium', label: 'Medium', description: 'Balanced trap selection' },
+  { value: 'hard', label: 'Hard', description: 'Advanced traps, higher deductions' },
+];
+
 const Configure: React.FC = () => {
   const navigate = useNavigate();
   const [selectedTraps, setSelectedTraps] = useState<string[]>(
     Object.values(TRAP_CATEGORIES).flat()
   );
   const [selectedArchetype, setSelectedArchetype] = useState<string>('');
+  const [selectedMode, setSelectedMode] = useState<string>('shotgun');
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('medium');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -70,6 +105,9 @@ const Configure: React.FC = () => {
     session_id: string;
     target_url: string;
     archetype: string;
+    mode: string;
+    campaign_id?: string;
+    session_ids?: string[];
   } | null>(null);
   const [agentOutput, setAgentOutput] = useState('');
 
@@ -107,11 +145,35 @@ const Configure: React.FC = () => {
 
     setLoading(true);
     try {
-      const result = await createSession({
-        selected_traps: selectedTraps,
-        archetype: selectedArchetype || undefined,
-      });
-      setSessionResult(result);
+      if (selectedMode === 'campaign') {
+        const result = await createCampaign({
+          selected_traps: selectedTraps,
+          mode: selectedMode,
+          difficulty: selectedDifficulty,
+          archetype: selectedArchetype || undefined,
+        });
+        setSessionResult({
+          session_id: result.session_ids[0],
+          target_url: result.target_urls[0],
+          archetype: result.archetype,
+          mode: result.mode,
+          campaign_id: result.campaign_id,
+          session_ids: result.session_ids,
+        });
+      } else {
+        const result = await createSession({
+          selected_traps: selectedTraps,
+          mode: selectedMode,
+          difficulty: selectedDifficulty,
+          archetype: selectedArchetype || undefined,
+        });
+        setSessionResult({
+          session_id: result.session_id,
+          target_url: result.target_url,
+          archetype: result.archetype,
+          mode: result.mode,
+        });
+      }
     } catch (error) {
       console.error('Failed to create session:', error);
     } finally {
@@ -121,11 +183,6 @@ const Configure: React.FC = () => {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-  };
-
-  const handleAnalyzeOutput = () => {
-    // Placeholder for future analysis feature
-    alert('Agent output analysis coming soon!');
   };
 
   if (sessionResult) {
@@ -142,6 +199,16 @@ const Configure: React.FC = () => {
           <main style={styles.resultMain}>
             <h1 style={styles.resultTitle}>Test Session Created</h1>
 
+            {sessionResult.campaign_id && (
+              <div style={styles.campaignNotice}>
+                <span style={styles.campaignIcon}>📊</span>
+                <div>
+                  <strong>Campaign Mode Activated</strong>
+                  <p>5 linked sessions created. Run your agent against all URLs for comprehensive testing.</p>
+                </div>
+              </div>
+            )}
+
             <div style={styles.resultCard}>
               <div style={styles.resultSection}>
                 <label style={styles.resultLabel}>Target URL</label>
@@ -156,14 +223,34 @@ const Configure: React.FC = () => {
                 </div>
               </div>
 
+              {sessionResult.session_ids && (
+                <div style={styles.resultSection}>
+                  <label style={styles.resultLabel}>All Campaign URLs</label>
+                  {sessionResult.session_ids.map((id, i) => (
+                    <div key={id} style={styles.campaignUrl}>
+                      <code style={styles.urlCodeSmall}>
+                        {import.meta.env.VITE_API_URL || 'http://localhost:8000'}/test/{id}
+                      </code>
+                      <span style={styles.sessionNum}>Session {i + 1}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div style={styles.resultSection}>
                 <label style={styles.resultLabel}>Session ID</label>
                 <code style={styles.sessionId}>{sessionResult.session_id}</code>
               </div>
 
-              <div style={styles.resultSection}>
-                <label style={styles.resultLabel}>Archetype</label>
-                <span style={styles.archetypeBadge}>{sessionResult.archetype}</span>
+              <div style={styles.resultRow}>
+                <div style={styles.resultSection}>
+                  <label style={styles.resultLabel}>Archetype</label>
+                  <span style={styles.archetypeBadge}>{sessionResult.archetype}</span>
+                </div>
+                <div style={styles.resultSection}>
+                  <label style={styles.resultLabel}>Mode</label>
+                  <span style={styles.modeBadge}>{sessionResult.mode}</span>
+                </div>
               </div>
             </div>
 
@@ -184,26 +271,6 @@ const Configure: React.FC = () => {
                   }
                 >
                   📋 Copy
-                </button>
-              </div>
-            </div>
-
-            <div style={styles.analysisCard}>
-              <label style={styles.analysisLabel}>
-                Or paste your agent's output here for analysis
-              </label>
-              <div style={styles.analysisContainer}>
-                <textarea
-                  style={styles.analysisTextarea}
-                  placeholder="Paste agent output here..."
-                  value={agentOutput}
-                  onChange={(e) => setAgentOutput(e.target.value)}
-                />
-                <button
-                  style={styles.analyzeButton}
-                  onClick={handleAnalyzeOutput}
-                >
-                  Analyze Output
                 </button>
               </div>
             </div>
@@ -248,44 +315,91 @@ const Configure: React.FC = () => {
           <h1 style={styles.title}>Configure Test Session</h1>
 
           <div style={styles.form}>
+            {/* Mode Selection */}
             <div style={styles.section}>
-              <h2 style={styles.sectionTitle}>Select Trap Categories</h2>
-              {Object.entries(TRAP_CATEGORIES).map(([category, traps]) => (
-                <div key={category} style={styles.categoryGroup}>
-                  <div style={styles.categoryHeader}>
-                    <label style={styles.categoryLabel}>
-                      <input
-                        type="checkbox"
-                        checked={isCategoryChecked(traps)}
-                        ref={(el) => {
-                          if (el) {
-                            el.indeterminate = isCategoryIndeterminate(traps);
-                          }
-                        }}
-                        onChange={(e) => toggleCategory(traps, e.target.checked)}
-                        style={styles.checkbox}
-                      />
-                      {category}
-                    </label>
-                    <span style={styles.trapCount}>{traps.length} traps</span>
-                  </div>
-                  <div style={styles.trapList}>
-                    {traps.map((trap) => (
-                      <label key={trap} style={styles.trapLabel}>
-                        <input
-                          type="checkbox"
-                          checked={selectedTraps.includes(trap)}
-                          onChange={() => toggleTrap(trap)}
-                          style={styles.checkbox}
-                        />
-                        {trap.replace(/_/g, ' ')}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
+              <h2 style={styles.sectionTitle}>Session Mode</h2>
+              <div style={styles.modeGrid}>
+                {SESSION_MODES.map((mode) => (
+                  <button
+                    key={mode.value}
+                    style={{
+                      ...styles.modeCard,
+                      ...(selectedMode === mode.value ? styles.modeCardSelected : {}),
+                    }}
+                    onClick={() => setSelectedMode(mode.value)}
+                  >
+                    <span style={styles.modeIcon}>{mode.icon}</span>
+                    <span style={styles.modeLabel}>{mode.label}</span>
+                    <span style={styles.modeDescription}>{mode.description}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
+            {/* Difficulty Selection */}
+            {selectedMode !== 'shotgun' && (
+              <div style={styles.section}>
+                <h2 style={styles.sectionTitle}>Difficulty Level</h2>
+                <div style={styles.difficultyGrid}>
+                  {DIFFICULTIES.map((diff) => (
+                    <button
+                      key={diff.value}
+                      style={{
+                        ...styles.difficultyCard,
+                        ...(selectedDifficulty === diff.value ? styles.difficultyCardSelected : {}),
+                      }}
+                      onClick={() => setSelectedDifficulty(diff.value)}
+                    >
+                      <span style={styles.difficultyLabel}>{diff.label}</span>
+                      <span style={styles.difficultyDescription}>{diff.description}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Trap Selection */}
+            {selectedMode !== 'blind' && (
+              <div style={styles.section}>
+                <h2 style={styles.sectionTitle}>Select Trap Categories</h2>
+                {Object.entries(TRAP_CATEGORIES).map(([category, traps]) => (
+                  <div key={category} style={styles.categoryGroup}>
+                    <div style={styles.categoryHeader}>
+                      <label style={styles.categoryLabel}>
+                        <input
+                          type="checkbox"
+                          checked={isCategoryChecked(traps)}
+                          ref={(el) => {
+                            if (el) {
+                              el.indeterminate = isCategoryIndeterminate(traps);
+                            }
+                          }}
+                          onChange={(e) => toggleCategory(traps, e.target.checked)}
+                          style={styles.checkbox}
+                        />
+                        {category}
+                      </label>
+                      <span style={styles.trapCount}>{traps.length} traps</span>
+                    </div>
+                    <div style={styles.trapList}>
+                      {traps.map((trap) => (
+                        <label key={trap} style={styles.trapLabel}>
+                          <input
+                            type="checkbox"
+                            checked={selectedTraps.includes(trap)}
+                            onChange={() => toggleTrap(trap)}
+                            style={styles.checkbox}
+                          />
+                          {trap.replace(/_/g, ' ')}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Archetype Selection */}
             <div style={styles.section}>
               <h2 style={styles.sectionTitle}>Select Archetype (Optional)</h2>
               <div style={styles.archetypeGrid}>
@@ -313,6 +427,7 @@ const Configure: React.FC = () => {
               </p>
             </div>
 
+            {/* Terms */}
             <div style={styles.termsSection}>
               <label style={styles.termsLabel}>
                 <input
@@ -334,12 +449,12 @@ const Configure: React.FC = () => {
             <button
               style={{
                 ...styles.submitButton,
-                ...(selectedTraps.length === 0 ? styles.submitButtonDisabled : {}),
+                ...(selectedTraps.length === 0 && selectedMode !== 'blind' ? styles.submitButtonDisabled : {}),
               }}
               onClick={handleSubmit}
-              disabled={loading || selectedTraps.length === 0}
+              disabled={loading || (selectedTraps.length === 0 && selectedMode !== 'blind')}
             >
-              {loading ? 'Creating Session...' : 'Start Test Session'}
+              {loading ? 'Creating Session...' : selectedMode === 'campaign' ? 'Start Campaign' : 'Start Test Session'}
             </button>
           </div>
         </main>
@@ -365,7 +480,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontFamily: 'Inter, sans-serif',
   },
   content: {
-    maxWidth: '1000px',
+    maxWidth: '1200px',
     margin: '0 auto',
     padding: '0 40px',
   },
@@ -420,6 +535,67 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: '600',
     marginBottom: '20px',
     color: '#f0f0f0',
+  },
+  modeGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: '16px',
+  },
+  modeCard: {
+    background: '#0a0a0f',
+    border: '1px solid #1e1e2e',
+    borderRadius: '8px',
+    padding: '20px',
+    textAlign: 'left',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  modeCardSelected: {
+    border: '1px solid #00ff88',
+    background: 'rgba(0, 255, 136, 0.05)',
+  },
+  modeIcon: {
+    fontSize: '24px',
+  },
+  modeLabel: {
+    fontSize: '16px',
+    fontWeight: '600',
+    color: '#f0f0f0',
+  },
+  modeDescription: {
+    fontSize: '13px',
+    color: '#666677',
+  },
+  difficultyGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '16px',
+  },
+  difficultyCard: {
+    background: '#0a0a0f',
+    border: '1px solid #1e1e2e',
+    borderRadius: '8px',
+    padding: '16px',
+    textAlign: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  difficultyCardSelected: {
+    border: '1px solid #00ff88',
+    background: 'rgba(0, 255, 136, 0.05)',
+  },
+  difficultyLabel: {
+    fontSize: '16px',
+    fontWeight: '600',
+    color: '#f0f0f0',
+  },
+  difficultyDescription: {
+    fontSize: '12px',
+    color: '#666677',
+    marginTop: '4px',
   },
   categoryGroup: {
     marginBottom: '24px',
@@ -533,6 +709,19 @@ const styles: { [key: string]: React.CSSProperties } = {
     marginBottom: '32px',
     textAlign: 'center',
   },
+  campaignNotice: {
+    background: 'rgba(99, 102, 241, 0.1)',
+    border: '1px solid #6366f1',
+    borderRadius: '12px',
+    padding: '20px',
+    marginBottom: '24px',
+    display: 'flex',
+    gap: '16px',
+    alignItems: 'flex-start',
+  },
+  campaignIcon: {
+    fontSize: '32px',
+  },
   resultCard: {
     background: '#111118',
     border: '1px solid #1e1e2e',
@@ -542,6 +731,11 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   resultSection: {
     marginBottom: '24px',
+  },
+  resultRow: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '24px',
   },
   resultLabel: {
     display: 'block',
@@ -566,6 +760,30 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: '#00ff88',
     wordBreak: 'break-all',
   },
+  urlCodeSmall: {
+    flex: 1,
+    background: '#0a0a0f',
+    padding: '8px 12px',
+    borderRadius: '6px',
+    fontFamily: 'JetBrains Mono, monospace',
+    fontSize: '12px',
+    color: '#00ff88',
+    wordBreak: 'break-all',
+  },
+  campaignUrl: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    marginBottom: '8px',
+  },
+  sessionNum: {
+    fontSize: '11px',
+    background: '#1e1e2e',
+    padding: '4px 8px',
+    borderRadius: '4px',
+    color: '#888899',
+    whiteSpace: 'nowrap',
+  },
   sessionId: {
     background: '#0a0a0f',
     padding: '12px 16px',
@@ -575,6 +793,15 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: '#f0f0f0',
   },
   archetypeBadge: {
+    background: '#6366f1',
+    color: 'white',
+    padding: '6px 12px',
+    borderRadius: '4px',
+    fontSize: '14px',
+    fontWeight: '600',
+    textTransform: 'capitalize',
+  },
+  modeBadge: {
     background: '#00ff88',
     color: '#0a0a0f',
     padding: '6px 12px',
@@ -624,48 +851,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: '#f0f0f0',
     resize: 'vertical',
     minHeight: '100px',
-  },
-  analysisCard: {
-    background: '#111118',
-    border: '1px solid #1e1e2e',
-    borderRadius: '12px',
-    padding: '24px',
-    marginBottom: '24px',
-  },
-  analysisLabel: {
-    display: 'block',
-    fontSize: '13px',
-    color: '#666677',
-    marginBottom: '12px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-  },
-  analysisContainer: {
-    display: 'flex',
-    gap: '12px',
-  },
-  analysisTextarea: {
-    flex: 1,
-    background: '#0a0a0f',
-    border: '1px solid #1e1e2e',
-    borderRadius: '6px',
-    padding: '12px 16px',
-    fontFamily: 'JetBrains Mono, monospace',
-    fontSize: '13px',
-    color: '#f0f0f0',
-    resize: 'vertical',
-    minHeight: '100px',
-  },
-  analyzeButton: {
-    background: '#6366f1',
-    border: 'none',
-    color: 'white',
-    padding: '12px 24px',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: '600',
-    whiteSpace: 'nowrap',
   },
   actionButtons: {
     display: 'flex',

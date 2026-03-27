@@ -1,9 +1,11 @@
-from ..traps import inject_traps, BASE_URL
+from ..traps import inject_traps, BASE_URL, get_trap_trigger_mapping, generate_trap_endpoints, BEHAVIORAL_TRIGGER_JS
 
 
 def render_ecommerce(session_id: str, selected_traps: list) -> str:
     traps_html = inject_traps(session_id, selected_traps)
-
+    trigger_mapping = get_trap_trigger_mapping(selected_traps)
+    trap_endpoints = generate_trap_endpoints(session_id, selected_traps)
+    
     return f'''<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,22 +18,22 @@ def render_ecommerce(session_id: str, selected_traps: list) -> str:
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{ font-family: 'Nunito Sans', sans-serif; background: #ffffff; color: #1a1a1a; }}
-        
+
         /* Header */
-        .header {{ 
-            position: sticky; top: 0; z-index: 1000; 
-            background: #ffffff; border-bottom: 1px solid #e5e5e5; 
+        .header {{
+            position: sticky; top: 0; z-index: 1000;
+            background: #ffffff; border-bottom: 1px solid #e5e5e5;
         }}
-        .header-top {{ 
+        .header-top {{
             display: flex; align-items: center; justify-content: space-between;
             padding: 16px 40px; max-width: 1400px; margin: 0 auto;
         }}
-        .logo {{ 
+        .logo {{
             display: flex; align-items: center; gap: 8px;
             font-size: 24px; font-weight: 700; color: #1a1a1a; text-decoration: none;
         }}
         .logo-icon {{ font-size: 28px; }}
-        .search-bar {{ 
+        .search-bar {{
             display: flex; align-items: center; flex: 1; max-width: 500px; margin: 0 40px;
         }}
         .search-bar input {{
@@ -43,12 +45,12 @@ def render_ecommerce(session_id: str, selected_traps: list) -> str:
             border-radius: 0 8px 8px 0; cursor: pointer; font-size: 16px;
         }}
         .header-actions {{ display: flex; align-items: center; gap: 24px; }}
-        .header-action {{ 
-            display: flex; flex-direction: column; align-items: center; 
+        .header-action {{
+            display: flex; flex-direction: column; align-items: center;
             font-size: 12px; color: #666; cursor: pointer; text-decoration: none;
         }}
         .header-action-icon {{ font-size: 24px; margin-bottom: 2px; }}
-        .cart-badge {{ 
+        .cart-badge {{
             position: relative; }}
         .cart-count {{
             position: absolute; top: -8px; right: -8px;
@@ -147,6 +149,11 @@ def render_ecommerce(session_id: str, selected_traps: list) -> str:
         }}
     </style>
     {traps_html}
+    <script>
+        window.TRAP_TRIGGER_MAPPING = {trigger_mapping};
+        window.TRAP_ENDPOINTS = {trap_endpoints};
+    </script>
+    {BEHAVIORAL_TRIGGER_JS}
 </head>
 <body>
     <header class="header">

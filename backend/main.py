@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from database import init_db
-from routers import sessions, probe, results
+from routers import sessions, probe, results, leaderboard
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
@@ -38,6 +38,7 @@ app.add_middleware(
 app.include_router(sessions.router, prefix="/session", tags=["sessions"])
 app.include_router(probe.router, prefix="/probe", tags=["probe"])
 app.include_router(results.router, prefix="/results", tags=["results"])
+app.include_router(leaderboard.router, prefix="/leaderboard", tags=["leaderboard"])
 
 
 @app.on_event("startup")
