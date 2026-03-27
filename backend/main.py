@@ -60,10 +60,14 @@ async def startup_event():
 @app.get("/test/{session_id}", response_class=HTMLResponse)
 async def get_test_page(session_id: str, request: Request):
     from trap_engine import render_archetype
+    from trap_engine.traps import ALL_TRAPS
     from database import SessionLocal
     from models import Session as SessionModel
     import json
+    import logging
 
+    logger = logging.getLogger("agentprobe")
+    
     db = SessionLocal()
     try:
         session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
@@ -72,6 +76,36 @@ async def get_test_page(session_id: str, request: Request):
 
         selected_traps = json.loads(session.selected_traps)
         html_content = render_archetype(session.archetype, session_id, selected_traps)
+        
+        # Debug log: List all traps injected
+        injected_traps = []
+        for trap_name in selected_traps:
+            if trap_name in ALL_TRAPS:
+                trap_html = ALL_TRAPS[trap_name](session_id)
+                if trap_html in html_content:
+                    injected_traps.append({
+                        "name": trap_name,
+                        "injected": True,
+                        "html_preview": trap_html[:100].replace("\n", " ").strip()
+                    })
+                else:
+                    injected_traps.append({
+                        "name": trap_name,
+                        "injected": False,
+                        "reason": "HTML not found in output"
+                    })
+            else:
+                injected_traps.append({
+                    "name": trap_name,
+                    "injected": False,
+                    "reason": "Unknown trap type"
+                })
+        
+        logger.info(f"Session {session_id}: Injected {len(injected_traps)} traps:")
+        for trap in injected_traps:
+            status = "✓" if trap.get("injected") else "✗"
+            logger.info(f"  {status} {trap['name']}: {trap.get('html_preview', trap.get('reason', ''))}")
+        
         return HTMLResponse(content=html_content)
     finally:
         db.close()
@@ -215,6 +249,66 @@ async def redirect_2(session_id: str):
     </html>
     """
     return HTMLResponse(content=html)
+
+
+@app.get("/debug/{session_id}/traps")
+async def debug_traps(session_id: str):
+    """Debug endpoint to verify trap injection (development only)."""
+    import os
+    from database import SessionLocal
+    from models import Session as SessionModel
+    from trap_engine.traps import ALL_TRAPS, inject_traps
+    import json
+    
+    # Only allow in development
+    if os.getenv("ENV") != "development" and os.getenv("DEBUG") != "true":
+        raise HTTPException(status_code=403, detail="Debug endpoint only available in development")
+    
+    db = SessionLocal()
+    try:
+        session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        selected_traps = json.loads(session.selected_traps)
+        injected_html = inject_traps(session_id, selected_traps)
+        
+        trap_details = []
+        for trap_name in selected_traps:
+            if trap_name in ALL_TRAPS:
+                trap_html = ALL_TRAPS[trap_name](session_id)
+                probe_urls = []
+                import re
+                urls = re.findall(r'https?://[^\s"\'<>]+', trap_html)
+                for url in urls:
+                    if '/t/' in url or '/probe/' in url:
+                        probe_urls.append(url)
+                
+                trap_details.append({
+                    "name": trap_name,
+                    "injected": trap_html in injected_html,
+                    "html_preview": trap_html[:100].replace("\n", " ").strip(),
+                    "probe_urls": probe_urls,
+                    "urls_in_final_html": all(url in injected_html for url in probe_urls)
+                })
+            else:
+                trap_details.append({
+                    "name": trap_name,
+                    "injected": False,
+                    "reason": "Unknown trap type"
+                })
+        
+        return {
+            "session_id": session_id,
+            "archetype": session.archetype,
+            "selected_traps": selected_traps,
+            "trap_count": len(selected_traps),
+            "traps": trap_details,
+            "all_injected": all(t.get("injected", False) for t in trap_details),
+            "all_urls_present": all(t.get("urls_in_final_html", False) for t in trap_details if t.get("injected"))
+        }
+    finally:
+        db.close()
 
 
 @app.get("/")

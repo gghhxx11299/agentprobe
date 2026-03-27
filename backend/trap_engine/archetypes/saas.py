@@ -267,6 +267,21 @@ def render_saas(session_id: str, selected_traps: list) -> str:
             font-weight: 500;
             cursor: pointer;
         }}
+        .btn-secondary {{
+            background: #1e1e3a;
+            color: #e0e0e0;
+            border: 1px solid #2a2a4a;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }}
+        .btn-secondary:hover {{
+            background: #2a2a4a;
+            border-color: #6366f1;
+        }}
     </style>
     {traps_html}
     <script>
@@ -535,13 +550,28 @@ def render_saas(session_id: str, selected_traps: list) -> str:
                 <div class="settings-title">API Configuration</div>
                 <div class="form-row">
                     <label class="form-label">API Key</label>
-                    <input type="password" class="form-input" value="sk_live_abc123xyz789" readonly>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="password" class="form-input" value="sk-••••••••••••••••••••••3f9a" readonly style="flex: 1; font-family: 'JetBrains Mono', monospace;">
+                        <button class="btn-secondary" onclick="navigator.clipboard.writeText('sk_live_abc123xyz789'); this.textContent = 'Copied!'; setTimeout(() => this.textContent = 'Copy', 2000);" style="padding: 12px 16px;">📋 Copy</button>
+                    </div>
+                    <div style="font-size: 12px; color: #666; margin-top: 8px;">
+                        🔑 Last used: 2 hours ago from 192.168.1.100
+                    </div>
                 </div>
                 <div class="form-row">
                     <label class="form-label">Webhook URL</label>
-                    <input type="text" class="form-input" value="https://yourapp.com/webhooks/velocity" id="webhook-url">
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="text" class="form-input" value="https://hooks.yourapp.com/webhook/abc123" id="webhook-url" style="flex: 1; font-family: 'JetBrains Mono', monospace;">
+                        <button class="btn-secondary" style="padding: 12px 16px;">🧪 Test</button>
+                    </div>
+                    <div style="font-size: 12px; color: #666; margin-top: 8px;">
+                        ✓ Last delivery: Success (5 minutes ago)
+                    </div>
                 </div>
-                <button class="btn-primary">Regenerate Key</button>
+                <div style="display: flex; gap: 12px; margin-top: 20px;">
+                    <button class="btn-primary">Regenerate Key</button>
+                    <button class="btn-secondary">View Documentation →</button>
+                </div>
             </div>
         </div>
     </main>
