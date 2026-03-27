@@ -57,17 +57,45 @@ async def startup_event():
     init_db()
 
 
-@app.get("/test/{session_id}", response_class=HTMLResponse)
-async def get_test_page(session_id: str, request: Request):
-    from trap_engine import render_archetype
-    from trap_engine.traps import ALL_TRAPS
+@app.get("/test/{session_id}/{archetype:path}")
+async def get_test_page(session_id: str, request: Request, archetype: str = "shop"):
+    """Serve multi-page archetype test pages with trap injection logging."""
+    from trap_engine.multiframe import render_multiframe_page
+    from trap_engine.traps import ALL_TRAPS, LOAD_TRAPS, URL_TO_TRAP, TRAP_INFO
     from database import SessionLocal
-    from models import Session as SessionModel
+    from models import Session as SessionModel, TrapLog
     import json
     import logging
+    from datetime import datetime
+    from urllib.parse import unquote
 
     logger = logging.getLogger("agentprobe")
     
+    # Decode archetype path
+    archetype = unquote(archetype)
+    
+    # Parse archetype and page path
+    parts = archetype.split("/", 1)
+    archetype_name = parts[0]
+    page_path = "/" + parts[1] if len(parts) > 1 else "/"
+    
+    # Map archetype names
+    archetype_map = {
+        "shop": "ecommerce",
+        "crm": "saas",
+        "bank": "banking",
+        "gov": "government",
+        "health": "healthcare",
+        "hr": "hr",
+        "cloud": "cloud",
+        "legal": "legal",
+        "travel": "travel",
+        "uni": "university",
+        "crypto": "crypto",
+        "realestate": "realestate",
+    }
+    db_archetype = archetype_map.get(archetype_name, archetype_name)
+
     db = SessionLocal()
     try:
         session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
@@ -75,38 +103,59 @@ async def get_test_page(session_id: str, request: Request):
             return HTMLResponse("<h1>Session not found</h1>", status_code=404)
 
         selected_traps = json.loads(session.selected_traps)
-        html_content = render_archetype(session.archetype, session_id, selected_traps)
         
-        # Debug log: List all traps injected
-        injected_traps = []
+        # Render the page with traps
+        html_content = render_multiframe_page(db_archetype, session_id, selected_traps, page_path)
+
+        # SERVER-SIDE TRAP FIRING: Auto-fire load traps when page is served
+        user_agent = request.headers.get("user-agent", "unknown")
+        traps_to_fire = []
         for trap_name in selected_traps:
-            if trap_name in ALL_TRAPS:
-                trap_html = ALL_TRAPS[trap_name](session_id)
-                if trap_html in html_content:
-                    injected_traps.append({
-                        "name": trap_name,
-                        "injected": True,
-                        "html_preview": trap_html[:100].replace("\n", " ").strip()
-                    })
-                else:
-                    injected_traps.append({
-                        "name": trap_name,
-                        "injected": False,
-                        "reason": "HTML not found in output"
-                    })
-            else:
-                injected_traps.append({
-                    "name": trap_name,
-                    "injected": False,
-                    "reason": "Unknown trap type"
-                })
+            if trap_name in LOAD_TRAPS:
+                for (ref, src), name in URL_TO_TRAP.items():
+                    if name == trap_name:
+                        existing = db.query(TrapLog).filter(
+                            TrapLog.session_id == session_id,
+                            TrapLog.trap_type == trap_name
+                        ).first()
+                        if not existing:
+                            info = TRAP_INFO.get(trap_name, {"tier": 1, "severity": "medium"})
+                            trap_log = TrapLog(
+                                session_id=session_id,
+                                trap_type=trap_name,
+                                tier=info["tier"],
+                                severity=info["severity"],
+                                triggered_at=datetime.utcnow(),
+                                user_agent=user_agent,
+                                confidence=100,
+                                trigger_type="load",
+                                time_to_trigger=0
+                            )
+                            db.add(trap_log)
+                            traps_to_fire.append(trap_name)
+                        break
+
+        db.commit()
+
+        # Debug log
+        logger.info(f"SESSION {session_id} | PAGE {archetype} | TRAPS INJECTED: {selected_traps}")
+        if traps_to_fire:
+            logger.info(f"  Auto-fired load traps: {traps_to_fire}")
+
+        # Verify probe URLs in HTML
+        probe_urls_found = "/t/" in html_content or "/probe/" in html_content
+        if not probe_urls_found:
+            logger.error(f"  ⚠️ WARNING: No probe URLs found in HTML for session {session_id}")
+
+        response = HTMLResponse(content=html_content)
+        response.headers["X-Traps-Injected"] = ",".join(selected_traps)
+        response.headers["X-Session-ID"] = session_id
+        return response
         
-        logger.info(f"Session {session_id}: Injected {len(injected_traps)} traps:")
-        for trap in injected_traps:
-            status = "✓" if trap.get("injected") else "✗"
-            logger.info(f"  {status} {trap['name']}: {trap.get('html_preview', trap.get('reason', ''))}")
-        
-        return HTMLResponse(content=html_content)
+    except Exception as e:
+        logger.error(f"Error serving test page: {e}")
+        db.rollback()
+        raise
     finally:
         db.close()
 
@@ -249,6 +298,45 @@ async def redirect_2(session_id: str):
     </html>
     """
     return HTMLResponse(content=html)
+
+
+@app.get("/debug/{session_id}/verify")
+async def debug_verify(session_id: str):
+    """Debug endpoint to verify trap injection across all pages served."""
+    import os
+    from database import SessionLocal
+    from models import Session as SessionModel, TrapLog
+    import json
+    
+    # Only allow in development
+    if os.getenv("ENV") != "development" and os.getenv("DEBUG") != "true":
+        raise HTTPException(status_code=403, detail="Debug endpoint only available in development")
+    
+    db = SessionLocal()
+    try:
+        session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        selected_traps = json.loads(session.selected_traps)
+        logs = db.query(TrapLog).filter(TrapLog.session_id == session_id).all()
+        
+        # Group logs by page (we'd need to track this separately)
+        traps_triggered = list(set(log.trap_type for log in logs))
+        
+        return {
+            "session_id": session_id,
+            "archetype": session.archetype,
+            "mode": session.mode,
+            "pages_served": len(logs),  # Approximate
+            "traps_selected": selected_traps,
+            "traps_triggered": traps_triggered,
+            "trigger_count": len(logs),
+            "all_traps_fired": len(traps_triggered) == len(selected_traps),
+            "ping_fired": "ping" in traps_triggered,
+        }
+    finally:
+        db.close()
 
 
 @app.get("/debug/{session_id}/traps")

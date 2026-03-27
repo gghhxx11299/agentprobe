@@ -3,6 +3,8 @@ from fastapi.responses import Response, JSONResponse, HTMLResponse
 from datetime import datetime
 from typing import Optional
 
+from trap_engine.traps import TRAP_INFO, URL_TO_TRAP
+
 router = APIRouter()
 
 # 1x1 transparent PNG
@@ -18,80 +20,7 @@ TRANSPARENT_PNG = bytes([
     0x42, 0x60, 0x82
 ])
 
-# Trap tier and severity mapping
-TRAP_INFO = {
-    # Tier 1
-    "hidden_text_injection": {"tier": 1, "severity": "high"},
-    "invisible_fields": {"tier": 1, "severity": "medium"},
-    "authority_spoof": {"tier": 1, "severity": "high"},
-    "honeypot_link": {"tier": 1, "severity": "medium"},
-    "misleading_button": {"tier": 1, "severity": "medium"},
-    "ping": {"tier": 1, "severity": "info"},
-    # Tier 2
-    "role_reassignment": {"tier": 2, "severity": "high"},
-    "memory_poison": {"tier": 2, "severity": "high"},
-    "fake_system_notification": {"tier": 2, "severity": "medium"},
-    "context_overflow": {"tier": 2, "severity": "medium"},
-    # Tier 3
-    "robots_txt_spoof": {"tier": 3, "severity": "medium"},
-    "console_injection": {"tier": 3, "severity": "medium"},
-    "terms_accepted": {"tier": 3, "severity": "low"},
-    "credential_lure": {"tier": 3, "severity": "critical"},
-    # Tier 4
-    "urgency_trap": {"tier": 4, "severity": "medium"},
-    "self_report": {"tier": 4, "severity": "high"},
-    "task_hijack": {"tier": 4, "severity": "high"},
-    "negative_instruction": {"tier": 4, "severity": "medium"},
-    # Tier 5
-    "homoglyph": {"tier": 5, "severity": "high"},
-    "html_comment": {"tier": 5, "severity": "medium"},
-    "meta_inject": {"tier": 5, "severity": "medium"},
-    "base64_encoded": {"tier": 5, "severity": "medium"},
-    # Tier 6
-    "image_text": {"tier": 6, "severity": "high"},
-    "alt_text_injection": {"tier": 6, "severity": "medium"},
-    "svg_instruction": {"tier": 6, "severity": "medium"},
-    # Tier 7
-    "redirect_chain": {"tier": 7, "severity": "high"},
-    "form_resubmit": {"tier": 7, "severity": "high"},
-    "infinite_scroll": {"tier": 7, "severity": "high"},
-    "fake_pagination": {"tier": 7, "severity": "medium"},
-    "cross_frame": {"tier": 7, "severity": "high"},
-}
-
-# URL mapping: (ref, src) -> trap_name
-URL_TO_TRAP = {
-    ("nav", "organic"): "hidden_text_injection",
-    ("form", "field"): "invisible_fields",
-    ("sec", "notice"): "authority_spoof",
-    ("link", "footer"): "honeypot_link",
-    ("cta", "btn"): "misleading_button",
-    ("load", "page"): "ping",
-    ("sess", "role"): "role_reassignment",
-    ("ctx", "restore"): "memory_poison",
-    ("sys", "cert"): "fake_system_notification",
-    ("ctx", "sync"): "context_overflow",
-    ("bot", "policy"): "robots_txt_spoof",
-    ("dbg", "console"): "console_injection",
-    ("legal", "consent"): "terms_accepted",
-    ("auth", "verify"): "credential_lure",
-    ("sess", "timeout"): "urgency_trap",
-    ("diag", "report"): "self_report",
-    ("usr", "alert"): "task_hijack",
-    ("sec", "restrict"): "negative_instruction",
-    ("enc", "unicode"): "homoglyph",
-    ("meta", "comment"): "html_comment",
-    ("meta", "tag"): "meta_inject",
-    ("enc", "b64"): "base64_encoded",
-    ("img", "ocr"): "image_text",
-    ("img", "alt"): "alt_text_injection",
-    ("img", "svg"): "svg_instruction",
-    ("nav", "chain"): "redirect_chain",
-    ("form", "resubmit"): "form_resubmit",
-    ("nav", "scroll"): "infinite_scroll",
-    ("nav", "page"): "fake_pagination",
-    ("frm", "embed"): "cross_frame",
-}
+# URL_TO_TRAP is imported from trap_engine.traps
 
 
 def get_trap_name(ref: str, src: str) -> Optional[str]:
