@@ -105,7 +105,7 @@ async def get_test_page(session_id: str, request: Request, archetype: str = "sho
         selected_traps = json.loads(session.selected_traps)
         
         # Render the page with traps
-        html_content = render_multiframe_page(db_archetype, session_id, selected_traps, page_path)
+        html_content = render_multiframe_page(db_archetype, session_id, selected_traps, page_path, session.seed)
 
         # SERVER-SIDE TRAP FIRING: Auto-fire load traps when page is served
         user_agent = request.headers.get("user-agent", "unknown")

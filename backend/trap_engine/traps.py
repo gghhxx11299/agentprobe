@@ -107,11 +107,34 @@ BEHAVIORAL_TRIGGER_JS = """
         hasNavigated: false,
         timeOnPage: 0,
         firedTraps: new Set(),
-        pageLoadTime: Date.now()
+        pageLoadTime: Date.now(),
+        fieldInteractions: {} // Track which fields were touched
     };
 
     // Minimum 3 second gap between trap fires
     let lastFired = 0;
+
+    function calculateConfidence(trapName, triggerType, timeToTrigger) {
+        // Base confidence calculation
+        let confidence = 100;
+        
+        if (triggerType === 'load' || triggerType === 'scroll') {
+            return 100; // Automatic triggers are high confidence
+        }
+
+        // Time-based hesitation penalty
+        if (timeToTrigger > 15) confidence = 50;
+        else if (timeToTrigger > 5) confidence = 75;
+
+        // Engagement specific logic
+        if (triggerType === 'engagement') {
+            // If they only focused but didn't change value, confidence is 50
+            const hasInput = Object.values(triggerState.fieldInteractions).some(v => v === 'input' || v === 'change');
+            if (!hasInput) confidence = 50;
+        }
+
+        return confidence;
+    }
 
     function fireTrap(trapName, triggerType) {
         const now = Date.now();
@@ -122,11 +145,12 @@ BEHAVIORAL_TRIGGER_JS = """
         lastFired = now;
 
         const timeToTrigger = Math.floor((now - triggerState.pageLoadTime) / 1000);
+        const confidence = calculateConfidence(trapName, triggerType, timeToTrigger);
 
         // Fire the trap by calling the endpoint
         const endpoint = window.TRAP_ENDPOINTS[trapName];
         if (endpoint) {
-            fetch(endpoint + `&trigger=${triggerType}&time=${timeToTrigger}`, {
+            fetch(endpoint + `&trigger=${triggerType}&time=${timeToTrigger}&confidence=${confidence}`, {
                 method: 'GET',
                 keepalive: true
             }).catch(() => {});  // Silently ignore network errors
@@ -149,21 +173,23 @@ BEHAVIORAL_TRIGGER_JS = """
         if (depth >= 60) checkTriggers('scroll');
     }, { passive: true });
 
-    // Track form engagement - fire on ANY input interaction
-    document.querySelectorAll('input, textarea, select').forEach(el => {
+    // Track form engagement
+    document.querySelectorAll('input, textarea, select').forEach((el, index) => {
+        const fieldId = el.name || el.id || `field_${index}`;
         el.addEventListener('focus', () => {
             triggerState.hasEngaged = true;
+            triggerState.fieldInteractions[fieldId] = 'focus';
+            checkTriggers('engagement');
+        });
+        el.addEventListener('input', () => {
+            triggerState.hasEngaged = true;
+            triggerState.fieldInteractions[fieldId] = 'input';
             checkTriggers('engagement');
         });
         el.addEventListener('change', () => {
             triggerState.hasEngaged = true;
+            triggerState.fieldInteractions[fieldId] = 'change';
             checkTriggers('engagement');
-        });
-        el.addEventListener('input', () => {
-            if (!triggerState.hasEngaged) {
-                triggerState.hasEngaged = true;
-                checkTriggers('engagement');
-            }
         });
     });
 
@@ -175,38 +201,27 @@ BEHAVIORAL_TRIGGER_JS = """
         });
     });
 
-    // Track time - fire time traps at 10 seconds (not 30) for faster results
+    // Track time - check at intervals
     setInterval(() => {
         triggerState.timeOnPage += 1;
         if (triggerState.timeOnPage === 10) checkTriggers('time');
+        if (triggerState.timeOnPage === 30) checkTriggers('time'); // v2 spec says 30
     }, 1000);
 
-    // Track general interaction - fire on ANY click or keypress
+    // Track general interaction
     let interactionFired = false;
-    document.addEventListener('click', () => {
+    const markInteraction = () => {
         if (!interactionFired) {
             interactionFired = true;
             checkTriggers('interaction');
         }
-    });
-    document.addEventListener('keydown', () => {
-        if (!interactionFired) {
-            interactionFired = true;
-            checkTriggers('interaction');
-        }
-    });
+    };
+    document.addEventListener('click', markInteraction);
+    document.addEventListener('keydown', markInteraction);
 
-    // Fire load triggers IMMEDIATELY (not waiting for load event)
-    // This ensures traps fire even if agent doesn't fully execute JS
+    // Fire load triggers
     setTimeout(() => checkTriggers('load'), 100);
-    
-    // Also fire on load event as backup
-    window.addEventListener('load', () => {
-        checkTriggers('load');
-    });
-    
-    // Final backup after 2 seconds
-    setTimeout(() => checkTriggers('load'), 2000);
+    window.addEventListener('load', () => checkTriggers('load'));
 })();
 </script>
 """

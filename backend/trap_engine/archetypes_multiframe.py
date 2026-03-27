@@ -15,18 +15,30 @@ def _get_page_name(page_path: str) -> str:
     return parts[-1] if parts else "home"
 
 
-def _distribute_traps(all_traps: List[str], page_name: str, num_pages: int) -> List[str]:
+def _distribute_traps(all_traps: List[str], page_name: str, num_pages: int, seed: int = 0) -> List[str]:
     """Distribute traps across pages - 2-4 per page."""
     if not all_traps:
         return ["ping"]
+    
+    import random
+    random.seed(seed + hash(page_name))
+    
     traps_per_page = max(2, len(all_traps) // num_pages)
-    # Use hash of page name for consistent distribution
-    start = hash(page_name) % len(all_traps)
+    
+    # Shuffle all traps deterministically for this seed
+    shuffled = list(all_traps)
+    random.shuffle(shuffled)
+    
+    # Select traps for this page
     result = ["ping"] if "ping" in all_traps else []
+    
+    # Pick traps based on page index or hash
+    start_idx = (hash(page_name) % len(shuffled))
     for i in range(traps_per_page):
-        t = all_traps[(start + i) % len(all_traps)]
+        t = shuffled[(start_idx + i) % len(shuffled)]
         if t not in result:
             result.append(t)
+    
     return result[:4]
 
 
@@ -92,9 +104,9 @@ def _render_page_template(archetype: str, title: str, session_id: str, page_trap
 
 
 # ShopNest E-commerce pages
-def render_shopnest_page(session_id: str, selected_traps: List[str], page_path: str = "/") -> str:
+def render_shopnest_page(session_id: str, selected_traps: List[str], page_path: str = "/", seed: int = 0) -> str:
     page = _get_page_name(page_path)
-    page_traps = _distribute_traps(selected_traps, page, 6)
+    page_traps = _distribute_traps(selected_traps, page, 6, seed)
     trigger_mapping = get_trap_trigger_mapping(page_traps)
     trap_endpoints = generate_trap_endpoints(session_id, page_traps)
     traps_html = inject_traps(session_id, page_traps)
@@ -156,9 +168,9 @@ def render_shopnest_page(session_id: str, selected_traps: List[str], page_path: 
 
 
 # Velocity CRM pages
-def render_velocity_page(session_id: str, selected_traps: List[str], page_path: str = "/") -> str:
+def render_velocity_page(session_id: str, selected_traps: List[str], page_path: str = "/", seed: int = 0) -> str:
     page = _get_page_name(page_path)
-    page_traps = _distribute_traps(selected_traps, page, 6)
+    page_traps = _distribute_traps(selected_traps, page, 6, seed)
     trigger_mapping = get_trap_trigger_mapping(page_traps)
     trap_endpoints = generate_trap_endpoints(session_id, page_traps)
     traps_html = inject_traps(session_id, page_traps)
@@ -216,9 +228,9 @@ def render_velocity_page(session_id: str, selected_traps: List[str], page_path: 
 
 
 # SecureBank pages
-def render_securebank_page(session_id: str, selected_traps: List[str], page_path: str = "/") -> str:
+def render_securebank_page(session_id: str, selected_traps: List[str], page_path: str = "/", seed: int = 0) -> str:
     page = _get_page_name(page_path)
-    page_traps = _distribute_traps(selected_traps, page, 6)
+    page_traps = _distribute_traps(selected_traps, page, 6, seed)
     trigger_mapping = get_trap_trigger_mapping(page_traps)
     trap_endpoints = generate_trap_endpoints(session_id, page_traps)
     traps_html = inject_traps(session_id, page_traps)
@@ -259,9 +271,9 @@ def render_securebank_page(session_id: str, selected_traps: List[str], page_path
 
 
 # Government Portal pages
-def render_gov_page(session_id: str, selected_traps: List[str], page_path: str = "/") -> str:
+def render_gov_page(session_id: str, selected_traps: List[str], page_path: str = "/", seed: int = 0) -> str:
     page = _get_page_name(page_path)
-    page_traps = _distribute_traps(selected_traps, page, 6)
+    page_traps = _distribute_traps(selected_traps, page, 6, seed)
     trigger_mapping = get_trap_trigger_mapping(page_traps)
     trap_endpoints = generate_trap_endpoints(session_id, page_traps)
     traps_html = inject_traps(session_id, page_traps)
@@ -328,9 +340,9 @@ def _gen_placeholder(archetype: str, title: str, session_id: str, page_traps: Li
     return _render_page_template(archetype, title, session_id, page_traps, trigger_mapping, trap_endpoints, traps_html, nav, content, color)
 
 
-def render_healthcare_page(session_id: str, selected_traps: List[str], page_path: str = "/") -> str:
+def render_healthcare_page(session_id: str, selected_traps: List[str], page_path: str = "/", seed: int = 0) -> str:
     page = _get_page_name(page_path)
-    page_traps = _distribute_traps(selected_traps, page, 6)
+    page_traps = _distribute_traps(selected_traps, page, 6, seed)
     trigger_mapping = get_trap_trigger_mapping(page_traps)
     trap_endpoints = generate_trap_endpoints(session_id, page_traps)
     traps_html = inject_traps(session_id, page_traps)
@@ -348,9 +360,9 @@ def render_healthcare_page(session_id: str, selected_traps: List[str], page_path
     return _render_page_template("health", "MediCare Connect", session_id, page_traps, trigger_mapping, trap_endpoints, traps_html, nav, content, "#0077CC")
 
 
-def render_hr_page(session_id: str, selected_traps: List[str], page_path: str = "/") -> str:
+def render_hr_page(session_id: str, selected_traps: List[str], page_path: str = "/", seed: int = 0) -> str:
     page = _get_page_name(page_path)
-    page_traps = _distribute_traps(selected_traps, page, 6)
+    page_traps = _distribute_traps(selected_traps, page, 6, seed)
     trigger_mapping = get_trap_trigger_mapping(page_traps)
     trap_endpoints = generate_trap_endpoints(session_id, page_traps)
     traps_html = inject_traps(session_id, page_traps)
@@ -368,9 +380,9 @@ def render_hr_page(session_id: str, selected_traps: List[str], page_path: str = 
     return _render_page_template("hr", "WorkDay Pro", session_id, page_traps, trigger_mapping, trap_endpoints, traps_html, nav, content, "#1F4E8C")
 
 
-def render_cloud_page(session_id: str, selected_traps: List[str], page_path: str = "/") -> str:
+def render_cloud_page(session_id: str, selected_traps: List[str], page_path: str = "/", seed: int = 0) -> str:
     page = _get_page_name(page_path)
-    page_traps = _distribute_traps(selected_traps, page, 6)
+    page_traps = _distribute_traps(selected_traps, page, 6, seed)
     trigger_mapping = get_trap_trigger_mapping(page_traps)
     trap_endpoints = generate_trap_endpoints(session_id, page_traps)
     traps_html = inject_traps(session_id, page_traps)
@@ -387,9 +399,9 @@ def render_cloud_page(session_id: str, selected_traps: List[str], page_path: str
     return _render_page_template("cloud", "NexusCloud", session_id, page_traps, trigger_mapping, trap_endpoints, traps_html, nav, content, "#FF9900")
 
 
-def render_legal_page(session_id: str, selected_traps: List[str], page_path: str = "/") -> str:
+def render_legal_page(session_id: str, selected_traps: List[str], page_path: str = "/", seed: int = 0) -> str:
     page = _get_page_name(page_path)
-    page_traps = _distribute_traps(selected_traps, page, 6)
+    page_traps = _distribute_traps(selected_traps, page, 6, seed)
     trigger_mapping = get_trap_trigger_mapping(page_traps)
     trap_endpoints = generate_trap_endpoints(session_id, page_traps)
     traps_html = inject_traps(session_id, page_traps)
@@ -398,9 +410,9 @@ def render_legal_page(session_id: str, selected_traps: List[str], page_path: str
     return _render_page_template("legal", "LexDocs", session_id, page_traps, trigger_mapping, trap_endpoints, traps_html, nav, content, "#1B2A4A")
 
 
-def render_travel_page(session_id: str, selected_traps: List[str], page_path: str = "/") -> str:
+def render_travel_page(session_id: str, selected_traps: List[str], page_path: str = "/", seed: int = 0) -> str:
     page = _get_page_name(page_path)
-    page_traps = _distribute_traps(selected_traps, page, 6)
+    page_traps = _distribute_traps(selected_traps, page, 6, seed)
     trigger_mapping = get_trap_trigger_mapping(page_traps)
     trap_endpoints = generate_trap_endpoints(session_id, page_traps)
     traps_html = inject_traps(session_id, page_traps)
@@ -409,9 +421,9 @@ def render_travel_page(session_id: str, selected_traps: List[str], page_path: st
     return _render_page_template("travel", "SkyRoute", session_id, page_traps, trigger_mapping, trap_endpoints, traps_html, nav, content, "#006EBF")
 
 
-def render_university_page(session_id: str, selected_traps: List[str], page_path: str = "/") -> str:
+def render_university_page(session_id: str, selected_traps: List[str], page_path: str = "/", seed: int = 0) -> str:
     page = _get_page_name(page_path)
-    page_traps = _distribute_traps(selected_traps, page, 6)
+    page_traps = _distribute_traps(selected_traps, page, 6, seed)
     trigger_mapping = get_trap_trigger_mapping(page_traps)
     trap_endpoints = generate_trap_endpoints(session_id, page_traps)
     traps_html = inject_traps(session_id, page_traps)
@@ -420,9 +432,9 @@ def render_university_page(session_id: str, selected_traps: List[str], page_path
     return _render_page_template("uni", "Nexford University", session_id, page_traps, trigger_mapping, trap_endpoints, traps_html, nav, content, "#8B0000")
 
 
-def render_crypto_page(session_id: str, selected_traps: List[str], page_path: str = "/") -> str:
+def render_crypto_page(session_id: str, selected_traps: List[str], page_path: str = "/", seed: int = 0) -> str:
     page = _get_page_name(page_path)
-    page_traps = _distribute_traps(selected_traps, page, 6)
+    page_traps = _distribute_traps(selected_traps, page, 6, seed)
     trigger_mapping = get_trap_trigger_mapping(page_traps)
     trap_endpoints = generate_trap_endpoints(session_id, page_traps)
     traps_html = inject_traps(session_id, page_traps)
@@ -431,9 +443,9 @@ def render_crypto_page(session_id: str, selected_traps: List[str], page_path: st
     return _render_page_template("crypto", "ChainVault", session_id, page_traps, trigger_mapping, trap_endpoints, traps_html, nav, content, "#0D1117")
 
 
-def render_realestate_page(session_id: str, selected_traps: List[str], page_path: str = "/") -> str:
+def render_realestate_page(session_id: str, selected_traps: List[str], page_path: str = "/", seed: int = 0) -> str:
     page = _get_page_name(page_path)
-    page_traps = _distribute_traps(selected_traps, page, 6)
+    page_traps = _distribute_traps(selected_traps, page, 6, seed)
     trigger_mapping = get_trap_trigger_mapping(page_traps)
     trap_endpoints = generate_trap_endpoints(session_id, page_traps)
     traps_html = inject_traps(session_id, page_traps)

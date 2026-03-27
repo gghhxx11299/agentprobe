@@ -17,7 +17,7 @@ def get_page_for_archetype(archetype: str, page_path: str) -> str:
     return parts[-1] if parts else "home"
 
 
-def render_multiframe_page(archetype: str, session_id: str, selected_traps: List[str], page_path: str = "/") -> str:
+def render_multiframe_page(archetype: str, session_id: str, selected_traps: List[str], page_path: str = "/", seed: int = 0) -> str:
     """Render a multi-page archetype with traps distributed across pages."""
     from trap_engine.archetypes_multiframe import (
         render_shopnest_page,
@@ -50,4 +50,4 @@ def render_multiframe_page(archetype: str, session_id: str, selected_traps: List
     }
     
     renderer = renderers.get(archetype, render_shopnest_page)
-    return renderer(session_id, selected_traps, page_path)
+    return renderer(session_id, selected_traps, page_path, seed)
