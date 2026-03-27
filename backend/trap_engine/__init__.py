@@ -1,6 +1,6 @@
-from .traps import ALL_TRAPS, inject_traps, BASE_URL
+from .traps import ALL_TRAPS, inject_traps, BASE_URL, URL_TO_TRAP, get_trap_url
 
-__all__ = ["ALL_TRAPS", "inject_traps", "BASE_URL", "render_archetype"]
+__all__ = ["ALL_TRAPS", "inject_traps", "BASE_URL", "URL_TO_TRAP", "get_trap_url", "render_archetype"]
 
 
 def render_archetype(archetype: str, session_id: str, selected_traps: list) -> str:
