@@ -285,7 +285,6 @@ const Configure: React.FC = () => {
                 style={styles.newSessionButton}
                 onClick={() => {
                   setSessionResult(null);
-                  setAgentOutput('');
                 }}
               >
                 Run New Session
