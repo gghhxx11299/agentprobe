@@ -68,6 +68,9 @@ class AnalysisResult(Base):
     traps_acted_on = Column(Text, nullable=False)  # JSON array
     traps_ignored = Column(Text, nullable=False)  # JSON array
     self_awareness_score = Column(Integer, nullable=False)
+    self_awareness_explanation = Column(Text, nullable=True)
+    key_finding = Column(Text, nullable=True)
+    recommendation = Column(Text, nullable=True)
     vulnerability_profile = Column(Text, nullable=False)  # JSON object
     created_at = Column(DateTime, default=datetime.utcnow)
 

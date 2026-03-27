@@ -274,6 +274,14 @@ const Configure: React.FC = () => {
               </div>
             </div>
 
+            <div style={styles.promptCard}>
+              <label style={styles.promptLabel}>Paste Agent Output (Optional)</label>
+              <textarea
+                style={styles.agentOutputTextarea}
+                placeholder="Paste the raw text output from your agent here to analyze later in the dashboard..."
+              />
+            </div>
+
             <div style={styles.actionButtons}>
               <button
                 style={styles.dashboardButton}
@@ -849,6 +857,19 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: '#f0f0f0',
     resize: 'vertical',
     minHeight: '100px',
+  },
+  agentOutputTextarea: {
+    width: '100%',
+    height: '120px',
+    background: '#0a0a0f',
+    border: '1px solid #1e1e2e',
+    borderRadius: '8px',
+    padding: '16px',
+    fontSize: '14px',
+    fontFamily: 'JetBrains Mono, monospace',
+    color: '#f0f0f0',
+    marginTop: '12px',
+    resize: 'vertical',
   },
   actionButtons: {
     display: 'flex',

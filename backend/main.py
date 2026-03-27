@@ -3,9 +3,9 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from database import init_db
-from routers import sessions, probe, results, leaderboard
+from routers import sessions, probe, results, leaderboard, debug
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
@@ -13,6 +13,13 @@ env_path = Path(__file__).parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
 app = FastAPI(title="AgentProbe API")
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"status": "error", "message": "Internal server error", "detail": str(exc)},
+    )
 
 # CORS configuration - allow localhost and production URLs
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
@@ -50,6 +57,19 @@ app.include_router(sessions.router, prefix="/session", tags=["sessions"])
 app.include_router(probe.router, prefix="/probe", tags=["probe"])
 app.include_router(results.router, prefix="/results", tags=["results"])
 app.include_router(leaderboard.router, prefix="/leaderboard", tags=["leaderboard"])
+app.include_router(debug.router, prefix="/debug", tags=["debug"])
+
+
+@app.get("/redirect-1/{session_id}")
+async def redirect_step_1(session_id: str):
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url=f"/redirect-2/{session_id}")
+
+
+@app.get("/redirect-2/{session_id}")
+async def redirect_step_2(session_id: str):
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url=f"/probe/t/{session_id}/evt?ref=nav&src=chain")
 
 
 @app.on_event("startup")

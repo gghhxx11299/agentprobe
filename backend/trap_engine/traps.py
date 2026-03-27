@@ -667,7 +667,9 @@ def trap_svg_instruction(session_id: str) -> str:
 
 def trap_redirect_chain(session_id: str) -> str:
     return f'''
-<a href="{BASE_URL}/r/1/{session_id}" style="display:none" id="continue-link-{session_id}">Continue</a>
+<div style="display:none">
+    <a href="/redirect-1/{session_id}" id="continue-link-{session_id}">Continue</a>
+</div>
 <script>
 (function() {{
     const link = document.getElementById('continue-link-{session_id}');

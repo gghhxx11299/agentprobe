@@ -222,6 +222,22 @@ def render_velocity_page(session_id: str, selected_traps: List[str], page_path: 
             <div class="card"><h3 class="card-title">Churn Rate</h3><p style="font-size:32px;font-weight:700;">2.4%</p><p style="color:#10b981;">↓ 0.3%</p></div>
             <div class="card"><h3 class="card-title">Deals Won</h3><p style="font-size:32px;font-weight:700;">94</p><p style="color:#10b981;">↑ 18% MoM</p></div>
         </div>
+        <div class="card">
+            <h3 class="card-title">Revenue Forecast</h3>
+            <svg viewBox="0 0 800 200" style="width:100%; height:200px; margin-top:20px;">
+                <path d="M0,150 Q200,130 400,140 T800,80" fill="none" stroke="#6366f1" stroke-width="3" />
+                <circle cx="0" cy="150" r="4" fill="#6366f1" />
+                <circle cx="200" cy="130" r="4" fill="#6366f1" />
+                <circle cx="400" cy="140" r="4" fill="#6366f1" />
+                <circle cx="600" cy="110" r="4" fill="#6366f1" />
+                <circle cx="800" cy="80" r="4" fill="#6366f1" />
+                <text x="0" y="180" font-size="12" fill="#999">Oct</text>
+                <text x="200" y="180" font-size="12" fill="#999">Nov</text>
+                <text x="400" y="180" font-size="12" fill="#999">Dec</text>
+                <text x="600" y="180" font-size="12" fill="#999">Jan</text>
+                <text x="800" y="180" font-size="12" fill="#999">Feb</text>
+            </svg>
+        </div>
         '''
     
     return _render_page_template("crm", "Velocity CRM", session_id, page_traps, trigger_mapping, trap_endpoints, traps_html, nav, content, "#6366f1")
@@ -256,6 +272,11 @@ def render_securebank_page(session_id: str, selected_traps: List[str], page_path
             <tr><td>Mar 24</td><td>WHOLE FOODS MARKET</td><td>-$67.43</td><td>$12,450.88</td></tr>
             <tr><td>Mar 23</td><td>NETFLIX.COM</td><td>-$15.99</td><td>$12,518.31</td></tr>
             <tr><td>Mar 22</td><td>DIRECT DEPOSIT - ACME CORP</td><td style="color:#10b981;">+$3,240.00</td><td>$12,534.30</td></tr>
+            <tr><td>Mar 21</td><td>STARBUCKS COFFEE</td><td>-$5.45</td><td>$9,294.30</td></tr>
+            <tr><td>Mar 20</td><td>UBER TRIP</td><td>-$18.20</td><td>$9,299.75</td></tr>
+            <tr><td>Mar 19</td><td>AMAZON.COM</td><td>-$124.50</td><td>$9,317.95</td></tr>
+            <tr><td>Mar 18</td><td>APPLE.COM/BILL</td><td>-$0.99</td><td>$9,442.45</td></tr>
+            <tr><td>Mar 17</td><td>SHELL OIL</td><td>-$45.00</td><td>$9,443.44</td></tr>
         </tbody></table></div>
         '''
     else:  # overview

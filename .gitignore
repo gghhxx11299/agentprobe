@@ -46,8 +46,23 @@ htmlcov/
 .venv/
 venv/
 ENV/
+browser_venv/
+backend/venv/
+
+# Assets & Binaries
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!browser_report.json
 
 # Misc
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+browser_venv/
