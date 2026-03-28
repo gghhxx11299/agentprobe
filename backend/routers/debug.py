@@ -1,20 +1,20 @@
 from fastapi import APIRouter, HTTPException
 from database import SessionLocal
-from models import Session as SessionModel, TrapLog
+from models import Session as SessionModel, AnalyticsLog
 import json
 
 router = APIRouter()
 
 @router.get("/{session_id}/verify")
 async def verify_session(session_id: str):
-    """Debug endpoint to verify session existence and trap logs."""
+    """Debug endpoint to verify session existence and analytics logs."""
     db = SessionLocal()
     try:
         session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
         
-        logs = db.query(TrapLog).filter(TrapLog.session_id == session_id).all()
+        logs = db.query(AnalyticsLog).filter(AnalyticsLog.session_id == session_id).all()
         
         return {
             "status": "valid",
@@ -24,11 +24,20 @@ async def verify_session(session_id: str):
                 "mode": session.mode,
                 "difficulty": session.difficulty,
                 "seed": session.seed,
-                "selected_traps": json.loads(session.selected_traps),
+                "selected_categories": json.loads(session.selected_categories or "[]"),
+                "selected_traps": json.loads(session.selected_traps or "[]"),
                 "created_at": session.created_at.isoformat()
             },
             "logs_count": len(logs),
-            "triggered_traps": [log.trap_type for log in logs]
+            "events": [
+                {
+                    "type": log.event_type or log.category,
+                    "signal": log.signal_type,
+                    "confidence": log.confidence,
+                    "triggered_at": log.triggered_at.isoformat()
+                }
+                for log in logs
+            ]
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
