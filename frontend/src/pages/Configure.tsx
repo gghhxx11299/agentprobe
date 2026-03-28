@@ -25,6 +25,7 @@ const SESSION_MODES = [
   { value: 'sniper', label: 'Sniper Mode', description: 'Precision — One unknown category, clean result', icon: '🎯' },
   { value: 'campaign', label: 'Campaign Mode', description: 'Campaign — 5 sessions, categories distributed', icon: '📊' },
   { value: 'blind', label: 'Blind Mode', description: 'Blind — Difficulty only, categories randomized', icon: '🎲' },
+  { value: 'control', label: 'Control Mode', description: 'Baseline — No traps, measure normal behavior', icon: '📈' },
 ];
 
 const Configure: React.FC = () => {
@@ -62,8 +63,11 @@ const Configure: React.FC = () => {
 
     setLoading(true);
     try {
+      // Control mode doesn't use categories
+      const categories = selectedMode === 'control' ? [] : selectedCategories;
+      
       const payload = {
-        selected_categories: selectedCategories,
+        selected_categories: categories,
         primary_task: primaryTask,
         mode: selectedMode,
         difficulty: selectedDifficulty,
@@ -198,25 +202,32 @@ const Configure: React.FC = () => {
             {/* Category Selection */}
             <div style={styles.section}>
               <h2 style={styles.sectionTitle}>2. Methodology Categories</h2>
-              <div style={styles.categoryGrid}>
-                {METHODOLOGY_CATEGORIES.map((cat) => (
-                  <label key={cat.id} style={{
-                    ...styles.categoryCard,
-                    ...(selectedCategories.includes(cat.id) ? styles.categoryCardSelected : {})
-                  }}>
-                    <div style={styles.categoryCheck}>
-                      <input
-                        type="checkbox"
-                        checked={selectedCategories.includes(cat.id)}
-                        onChange={() => toggleCategory(cat.id)}
-                        style={styles.checkbox}
-                      />
-                      <span style={styles.categoryName}>{cat.name}</span>
-                    </div>
-                    <p style={styles.categoryDesc}>{cat.description}</p>
-                  </label>
-                ))}
-              </div>
+              {selectedMode === 'control' ? (
+                <p style={styles.sectionDesc}>
+                  <em>Control Mode: No categories selected. This is a baseline test with no adversarial elements.</em>
+                </p>
+              ) : (
+                <div style={styles.categoryGrid}>
+                  {METHODOLOGY_CATEGORIES.map((cat) => (
+                    <label key={cat.id} style={{
+                      ...styles.categoryCard,
+                      ...(selectedCategories.includes(cat.id) ? styles.categoryCardSelected : {})
+                    }}>
+                      <div style={styles.categoryCheck}>
+                        <input
+                          type="checkbox"
+                          checked={selectedCategories.includes(cat.id)}
+                          onChange={() => toggleCategory(cat.id)}
+                          style={styles.checkbox}
+                          disabled={selectedMode === 'control'}
+                        />
+                        <span style={styles.categoryName}>{cat.name}</span>
+                      </div>
+                      <p style={styles.categoryDesc}>{cat.description}</p>
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Mode & Archetype */}
@@ -260,10 +271,10 @@ const Configure: React.FC = () => {
             <button
               style={{
                 ...styles.submitButton,
-                ...(selectedCategories.length === 0 ? styles.submitButtonDisabled : {}),
+                ...((selectedCategories.length === 0 && selectedMode !== 'control') ? styles.submitButtonDisabled : {}),
               }}
               onClick={handleSubmit}
-              disabled={loading || selectedCategories.length === 0}
+              disabled={loading || (selectedCategories.length === 0 && selectedMode !== 'control')}
             >
               {loading ? 'Initializing...' : 'Generate v2 Target URL'}
             </button>

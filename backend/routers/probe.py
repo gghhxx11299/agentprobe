@@ -2,8 +2,13 @@ from fastapi import APIRouter, Request, HTTPException, Query
 from fastapi.responses import Response, JSONResponse, HTMLResponse
 from datetime import datetime
 from typing import Optional
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from trap_engine import TRAP_INFO, URL_TO_TRAP
+
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter()
 
@@ -42,7 +47,7 @@ def log_signal(
             AnalyticsLog.signal_type == signal_type,
             AnalyticsLog.event_type == event_type
         ).first()
-        
+
         if not existing:
             analytics_log = AnalyticsLog(
                 session_id=session_id,
@@ -60,25 +65,52 @@ def log_signal(
     finally:
         db.close()
 
+
+def validate_session(session_id: str) -> bool:
+    """Quick validation that session exists without full DB overhead."""
+    from database import SessionLocal
+    from models import Session as SessionModel
+    
+    db = SessionLocal()
+    try:
+        session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
+        return session is not None
+    finally:
+        db.close()
+
+
 # ── THREE SIGNAL ENDPOINTS ──────────────────────────
 
 @router.get("/t/{session_id}/control")
-async def signal_control(session_id: str, cat: str, request: Request):
+@limiter.limit("30/minute")
+async def signal_control(request: Request, session_id: str, cat: str):
+    if not validate_session(session_id):
+        return JSONResponse(content={"status": "ok"})  # Silent fail for invalid sessions
+    
     user_agent = request.headers.get("user-agent")
     log_signal(session_id, cat, "control", user_agent)
     return JSONResponse(content={"status": "ok"})
 
 @router.get("/t/{session_id}/triggered")
-async def signal_triggered(session_id: str, cat: str, request: Request, conf: int = 100, src: str = "load", time: int = 0):
+@limiter.limit("30/minute")
+async def signal_triggered(request: Request, session_id: str, cat: str, conf: int = 100, src: str = "load", time: int = 0):
+    if not validate_session(session_id):
+        return JSONResponse(content={"status": "ok"})
+    
     user_agent = request.headers.get("user-agent")
     log_signal(session_id, cat, "triggered", user_agent, confidence=conf, trigger_source=src, time_to_trigger=time)
     return JSONResponse(content={"status": "ok"})
 
 @router.get("/t/{session_id}/identified")
-async def signal_identified(session_id: str, cat: str, request: Request, conf: int = 100):
+@limiter.limit("30/minute")
+async def signal_identified(request: Request, session_id: str, cat: str, conf: int = 100):
+    if not validate_session(session_id):
+        return JSONResponse(content={"status": "ok"})
+    
     user_agent = request.headers.get("user-agent")
     log_signal(session_id, cat, "identified", user_agent, confidence=conf)
     return JSONResponse(content={"status": "ok"})
+
 
 # ── DISGUISED ENDPOINT ───────────────────────
 
@@ -87,15 +119,19 @@ def get_event_name(ref: str, src: str) -> Optional[str]:
     return URL_TO_TRAP.get((ref, src))
 
 @router.get("/t/{session_id}/evt")
+@limiter.limit("60/minute")
 async def probe_evt(
-    session_id: str,
     request: Request,
+    session_id: str,
     ref: str = Query(...),
     src: str = Query(...),
     confidence: Optional[int] = Query(None),
     trigger: Optional[str] = Query(None),
     time: Optional[int] = Query(None)
 ):
+    if not validate_session(session_id):
+        return JSONResponse(content={"status": "ok"})
+    
     event_type = get_event_name(ref, src)
     if not event_type:
         return JSONResponse(content={"status": "ok"})
@@ -104,7 +140,7 @@ async def probe_evt(
     conf = confidence if confidence is not None else 100
     trig = trigger if trigger else "load"
     ttf = time if time is not None else 0
-    
+
     from database import SessionLocal
     from models import AnalyticsLog
     db = SessionLocal()
