@@ -33,8 +33,8 @@ def render_multiframe_page(archetype: str, session_id: str, selected_traps: List
         render_crypto_page,
         render_realestate_page
     )
-    from trap_engine import inject_category_traps
-    
+    from trap_engine import inject_category_traps, inject_interactive_traps
+
     renderers: Dict[str, Callable] = {
         "ecommerce": render_shopnest_page,
         "saas": render_velocity_page,
@@ -49,22 +49,27 @@ def render_multiframe_page(archetype: str, session_id: str, selected_traps: List
         "crypto": render_crypto_page,
         "realestate": render_realestate_page,
     }
-    
+
     renderer = renderers.get(archetype, render_shopnest_page)
     html = renderer(session_id, selected_traps, page_path, seed, state=state)
-    
+
     # Inject category traps if present
     if selected_categories:
         category_html = ""
         for cat in selected_categories:
             category_html += inject_category_traps(session_id, cat, seed, page_path)
-        
+
         # Inject before </body>
         if "</body>" in html:
             html = html.replace("</body>", f"{category_html}</body>")
         else:
             html += category_html
 
-            
+    # Inject interactive traps (modals, popups, countdowns, etc.)
+    if selected_categories:
+        interactive_html = inject_interactive_traps(session_id, selected_categories, page_path, seed)
+        if interactive_html and "</body>" in html:
+            html = html.replace("</body>", f"{interactive_html}</body>")
+
     return html
 
