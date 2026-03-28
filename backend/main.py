@@ -4,8 +4,6 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
-from slowapi import SlowAPI, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from database import init_db
 from routers import sessions, probe, results, leaderboard, debug, state
 
@@ -14,10 +12,7 @@ from dotenv import load_dotenv
 env_path = Path(__file__).parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
-# Initialize rate limiter
 app = FastAPI(title="AgentProbe API")
-app.state.limiter = SlowAPI(key_func=get_remote_address)
-app.add_exception_handler(429, _rate_limit_exceeded_handler)
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -95,8 +90,6 @@ async def update_session_state_simple(session_id: str, key: str, val: str):
 @app.on_event("startup")
 async def startup_event():
     init_db()
-    # Initialize rate limiter with the app
-    app.state.limiter.init_app(app)
 
 @app.get("/test/{session_id}/{archetype:path}")
 async def get_test_page(session_id: str, request: Request, archetype: str = "shop"):

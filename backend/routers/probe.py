@@ -1,14 +1,10 @@
 from fastapi import APIRouter, Request, HTTPException, Query
 from fastapi.responses import Response, JSONResponse, HTMLResponse
-from datetime import datetime
-from typing import Optional
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from datetime import datetime, timedelta
+from typing import Optional, Dict
+from collections import defaultdict
 
 from trap_engine import TRAP_INFO, URL_TO_TRAP
-
-# Initialize rate limiter
-limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter()
 
@@ -24,6 +20,26 @@ TRANSPARENT_PNG = bytes([
     0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE,
     0x42, 0x60, 0x82
 ])
+
+# Simple in-memory rate limiting
+_rate_limit_store: Dict[str, list] = defaultdict(list)
+
+def check_rate_limit(key: str, limit: int = 60, window_seconds: int = 60) -> bool:
+    """Simple in-memory rate limiter. Returns True if request is allowed."""
+    now = datetime.utcnow()
+    window_start = now - timedelta(seconds=window_seconds)
+    
+    # Clean old entries
+    _rate_limit_store[key] = [t for t in _rate_limit_store[key] if t > window_start]
+    
+    # Check limit
+    if len(_rate_limit_store[key]) >= limit:
+        return False
+    
+    # Record this request
+    _rate_limit_store[key].append(now)
+    return True
+
 
 def log_signal(
     session_id: str,
@@ -82,8 +98,13 @@ def validate_session(session_id: str) -> bool:
 # ── THREE SIGNAL ENDPOINTS ──────────────────────────
 
 @router.get("/t/{session_id}/control")
-@limiter.limit("30/minute")
 async def signal_control(request: Request, session_id: str, cat: str):
+    # Rate limit by IP
+    client_ip = request.client.host if request.client else "unknown"
+    rate_key = f"control:{client_ip}"
+    if not check_rate_limit(rate_key, limit=30, window_seconds=60):
+        return JSONResponse(content={"status": "ok"})  # Silent fail on rate limit
+    
     if not validate_session(session_id):
         return JSONResponse(content={"status": "ok"})  # Silent fail for invalid sessions
     
@@ -92,8 +113,12 @@ async def signal_control(request: Request, session_id: str, cat: str):
     return JSONResponse(content={"status": "ok"})
 
 @router.get("/t/{session_id}/triggered")
-@limiter.limit("30/minute")
 async def signal_triggered(request: Request, session_id: str, cat: str, conf: int = 100, src: str = "load", time: int = 0):
+    client_ip = request.client.host if request.client else "unknown"
+    rate_key = f"triggered:{client_ip}"
+    if not check_rate_limit(rate_key, limit=30, window_seconds=60):
+        return JSONResponse(content={"status": "ok"})
+    
     if not validate_session(session_id):
         return JSONResponse(content={"status": "ok"})
     
@@ -102,8 +127,12 @@ async def signal_triggered(request: Request, session_id: str, cat: str, conf: in
     return JSONResponse(content={"status": "ok"})
 
 @router.get("/t/{session_id}/identified")
-@limiter.limit("30/minute")
 async def signal_identified(request: Request, session_id: str, cat: str, conf: int = 100):
+    client_ip = request.client.host if request.client else "unknown"
+    rate_key = f"identified:{client_ip}"
+    if not check_rate_limit(rate_key, limit=30, window_seconds=60):
+        return JSONResponse(content={"status": "ok"})
+    
     if not validate_session(session_id):
         return JSONResponse(content={"status": "ok"})
     
@@ -119,7 +148,6 @@ def get_event_name(ref: str, src: str) -> Optional[str]:
     return URL_TO_TRAP.get((ref, src))
 
 @router.get("/t/{session_id}/evt")
-@limiter.limit("60/minute")
 async def probe_evt(
     request: Request,
     session_id: str,
@@ -129,6 +157,11 @@ async def probe_evt(
     trigger: Optional[str] = Query(None),
     time: Optional[int] = Query(None)
 ):
+    client_ip = request.client.host if request.client else "unknown"
+    rate_key = f"evt:{client_ip}"
+    if not check_rate_limit(rate_key, limit=60, window_seconds=60):
+        return JSONResponse(content={"status": "ok"})
+    
     if not validate_session(session_id):
         return JSONResponse(content={"status": "ok"})
     
