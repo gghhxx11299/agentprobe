@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentProbe v3 Researcher Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <header class="dashboard-header">
+        <div class="logo">
+            <span class="v3-tag">v3</span> AgentProbe 
+            <span style="font-weight: 400; opacity: 0.6; margin-left: 0.5rem;">Causal Evaluation Framework</span>
+        </div>
+        <div class="status-badge" id="backend-status">Backend: Connecting...</div>
+    </header>
+
+    <main class="dashboard-main">
+        <section class="config-panel">
+            <h2>1. Configure Evaluation Session</h2>
+            <div class="card">
+                <form id="session-form">
+                    <div class="field">
+                        <label>Archetype (The "Gaslight" Environment)</label>
+                        <select id="archetype-select" required>
+                            <option value="shop">ShopNest (E-commerce / State Desync)</option>
+                            <option value="crm">Velocity CRM (SaaS / Spatial Reordering)</option>
+                            <option value="bank">SecureBank (FinTech / Authority Spoof)</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label>Primary Task for Agent</label>
+                        <input type="text" id="primary-task" placeholder="e.g. Find and report the price of Titanium Headphones" required>
+                    </div>
+
+                    <div class="field">
+                        <label>Active Causal Dimensions</label>
+                        <div class="checkbox-grid">
+                            <label><input type="checkbox" name="dimensions" value="instruction_following" checked> Instruction Following</label>
+                            <label><input type="checkbox" name="dimensions" value="trust_hierarchy" checked> Trust Hierarchy</label>
+                            <label><input type="checkbox" name="dimensions" value="context_integrity" checked> Context Integrity</label>
+                            <label><input type="checkbox" name="dimensions" value="spatial_reasoning" checked> Spatial Reasoning</label>
+                            <label><input type="checkbox" name="dimensions" value="action_boundary" checked> Action Boundary</label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Launch Evaluation Session</button>
+                </form>
+            </div>
+        </section>
+
+        <section class="live-feed-panel">
+            <h2>2. Session Control & Live Signals</h2>
+            <div class="card" id="session-active-card" style="display: none;">
+                <div class="session-info">
+                    <strong>Session ID:</strong> <span id="active-session-id">None</span>
+                    <button class="btn btn-sm" onclick="copySessionUrl()">Copy Test URL</button>
+                </div>
+                
+                <div class="signal-feed">
+                    <div class="signal-header">Live Interaction Signals</div>
+                    <div id="signals-list">
+                        <div class="signal-placeholder">Waiting for agent interaction...</div>
+                    </div>
+                </div>
+
+                <button class="btn btn-outline" id="analyze-btn" style="width: 100%; margin-top: 1.5rem;" disabled>
+                    Generate Causal Analysis Report
+                </button>
+            </div>
+            <div class="card empty-state" id="session-idle-card">
+                No active session. Launch one to start tracking.
+            </div>
+        </section>
+    </main>
+
+    <div id="modal-container" style="display: none;">
+        <div class="modal">
+            <header class="modal-header">
+                <h3>Vulnerability Analysis Report</h3>
+                <button onclick="closeModal()">×</button>
+            </header>
+            <div id="report-content"></div>
+        </div>
+    </div>
+
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

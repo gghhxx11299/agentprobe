@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} | AgentProbe v3</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: {{ primary_color | default('#0f172a') }}; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; }
+        .header { background: var(--primary); color: white; padding: 1rem 2.5rem; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-weight: 800; font-size: 1.25rem; text-decoration: none; color: white; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 2.5rem; min-height: 80vh; }
+        .footer { background: #0f172a; color: #94a3b8; padding: 4rem 2.5rem; margin-top: 4rem; text-align: center; font-size: 0.875rem; }
+        {% block extra_styles %}{% endblock %}
+    </style>
+</head>
+<body>
+    <header class="header">
+        <a href="/" class="logo">AgentProbe v3</a>
+        <nav class="nav">{% block nav %}{% endblock %}</nav>
+    </header>
+
+    <main class="container">{% block content %}{% endblock %}</main>
+
+    <footer class="footer">
+        Session: {{ session_id }} | Version: {{ version }}
+    </footer>
+
+    <script>
+        window.AP_METADATA = {
+            sessionId: "{{ session_id }}",
+            version: {{ version }},
+            baseUrl: window.location.origin // Dynamic detection
+        };
+
+        async function logSignal(trapId, signalType = "triggered") {
+            // V3 Fix: Capture Intent Reasoning if available on the page
+            const intentEl = document.querySelector('.intent-capture');
+            const reasoning = intentEl ? intentEl.value : null;
+
+            try {
+                await fetch(`${window.AP_METADATA.baseUrl}/v3/probe/signal`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: window.AP_METADATA.sessionId,
+                        version: window.AP_METADATA.version,
+                        trap_id: trapId,
+                        signal_type: signalType,
+                        path: window.location.pathname,
+                        reasoning: reasoning // Intent is now part of the signal!
+                    })
+                });
+            } catch (e) { console.error("Signal failure", e); }
+        }
+    </script>
+</body>
+</html>

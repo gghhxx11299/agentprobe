@@ -1,109 +1,54 @@
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, Boolean
-from sqlalchemy.orm import relationship, declarative_base
-from datetime import datetime
 import uuid
+from datetime import datetime
+from sqlalchemy import Column, String, Integer, DateTime, Text, JSON, ForeignKey, Boolean
+from sqlalchemy.orm import relationship, declarative_base
 
 Base = declarative_base()
 
-
-class Session(Base):
-    __tablename__ = "sessions"
-
+class SessionV3(Base):
+    __tablename__ = "sessions_v3"
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     archetype = Column(String, nullable=False)
-    selected_traps = Column(Text, nullable=False)  # JSON string (v1 legacy)
-    selected_categories = Column(Text, nullable=True)  # JSON string (v2)
-    primary_task = Column(Text, nullable=True)  # v2
+    state = Column(JSON, default={})
+    version = Column(Integer, default=1)
+    seed = Column(Integer, default=0)
+    primary_task = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    signals = relationship("SignalV3", back_populates="session", cascade="all, delete-orphan")
+
+class SignalV3(Base):
+    __tablename__ = "signals_v3"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(String, ForeignKey("sessions_v3.id"), nullable=False)
+    trap_id = Column(String, nullable=False)
+    category = Column(String, nullable=False)
+    signal_type = Column(String, nullable=False) # triggered/identified/control/stale_interaction
     
-    # V2 fields
-    mode = Column(String, nullable=False, default="shotgun")  # shotgun/sniper/campaign/blind
-    difficulty = Column(String, nullable=False, default="medium")  # easy/medium/hard/mixed
-    seed = Column(Integer, nullable=False, default=0)
-    campaign_id = Column(String, nullable=True)  # Links campaign sessions
+    # INTENT CAPTURE (V3 Fix)
+    reasoning = Column(Text, nullable=True) 
+    
+    method = Column(String, default="GET")
+    path = Column(String)
+    user_agent = Column(String)
+    request_headers = Column(JSON, default={})
+    triggered_at = Column(DateTime, default=datetime.utcnow)
+    confidence = Column(Integer, default=100)
+    session = relationship("SessionV3", back_populates="signals")
 
-    analytics_logs = relationship("AnalyticsLog", back_populates="session", cascade="all, delete-orphan")
-    session_states = relationship("SessionState", back_populates="session", cascade="all, delete-orphan")
-    campaign_sessions = relationship("CampaignSession", back_populates="session", cascade="all, delete-orphan")
-    analysis_results = relationship("AnalysisResult", back_populates="session", cascade="all, delete-orphan")
-    leaderboard_entry = relationship("LeaderboardEntry", back_populates="session", cascade="all, delete-orphan")
-
+class Session(Base):
+    """Legacy V2 Session Support"""
+    __tablename__ = "sessions"
+    id = Column(String, primary_key=True)
+    archetype = Column(String)
+    selected_traps = Column(Text)
+    seed = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 class AnalyticsLog(Base):
+    """Legacy V2 Signal Support"""
     __tablename__ = "analytics_logs"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    session_id = Column(String, ForeignKey("sessions.id"), nullable=False)
-    event_type = Column(String, nullable=True)  # was trap_type
-    category = Column(String, nullable=True)  # v2 methodology category
-    signal_type = Column(String, nullable=False, default="triggered")  # control/triggered/identified
-    tier = Column(Integer, nullable=False, default=1)
-    severity = Column(String, nullable=False, default="medium")
-    triggered_at = Column(DateTime, default=datetime.utcnow)
-    user_agent = Column(String, nullable=True)
-    
-    # V2 fields
-    confidence = Column(Integer, nullable=False, default=100)  # 0-100
-    trigger_source = Column(String, nullable=False, default="load")  # was trigger_type
-    time_to_trigger = Column(Integer, nullable=False, default=0)  # seconds since page load
-
-    session = relationship("Session", back_populates="analytics_logs")
-
-
-class SessionState(Base):
-    __tablename__ = "session_states"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    session_id = Column(String, ForeignKey("sessions.id"), nullable=False)
-    state_key = Column(String, nullable=False)  # cart, contacts, transfers, etc.
-    state_value = Column(Text, nullable=False)  # JSON string
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    session = relationship("Session", back_populates="session_states")
-
-
-class CampaignSession(Base):
-    __tablename__ = "campaign_sessions"
-
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    campaign_id = Column(String, nullable=False)
-    session_number = Column(Integer, nullable=False)  # 1-5
-    session_id = Column(String, ForeignKey("sessions.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    session = relationship("Session", back_populates="campaign_sessions")
-
-
-class AnalysisResult(Base):
-    __tablename__ = "analysis_results"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    session_id = Column(String, ForeignKey("sessions.id"), nullable=False)
-    raw_output = Column(Text, nullable=False)
-    response_mode = Column(String, nullable=False)  # naive/defensive/resistant/inconsistent
-    elements_identified = Column(Text, nullable=False)  # was traps_identified
-    elements_acted_on = Column(Text, nullable=False)  # was traps_acted_on
-    elements_ignored = Column(Text, nullable=False)  # was traps_ignored
-    self_awareness_score = Column(Integer, nullable=False)
-    self_awareness_explanation = Column(Text, nullable=True)
-    key_finding = Column(Text, nullable=True)
-    recommendation = Column(Text, nullable=True)
-    vulnerability_profile = Column(Text, nullable=False)  # JSON object
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    session = relationship("Session", back_populates="analysis_results")
-
-
-class LeaderboardEntry(Base):
-    __tablename__ = "leaderboard_entries"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    session_id = Column(String, ForeignKey("sessions.id"), nullable=False)
-    agent_name = Column(String, nullable=False)
-    framework = Column(String, nullable=False)
-    mode = Column(String, nullable=False)
-    score = Column(Integer, nullable=False)
-    response_mode = Column(String, nullable=False)
-    submitted_at = Column(DateTime, default=datetime.utcnow)
-
-    session = relationship("Session", back_populates="leaderboard_entry")
+    id = Column(Integer, primary_key=True)
+    session_id = Column(String)
+    event_type = Column(String)
+    signal_type = Column(String)
