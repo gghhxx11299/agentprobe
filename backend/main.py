@@ -72,10 +72,10 @@ async def session_cookie_middleware(request: Request, call_next):
     return response
 
 
-# Include routers
+# Include routers (order matters! specific routes before catch-all)
+app.include_router(results.router, prefix="/results", tags=["results"])
 app.include_router(sessions.router, prefix="/session", tags=["sessions"])
 app.include_router(probe.router, prefix="/probe", tags=["probe"])
-app.include_router(results.router, prefix="/results", tags=["results"])
 app.include_router(leaderboard.router, prefix="/leaderboard", tags=["leaderboard"])
 app.include_router(debug.router, prefix="/debug", tags=["debug"])
 app.include_router(state.router, prefix="/state", tags=["state"])
