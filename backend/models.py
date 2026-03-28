@@ -36,19 +36,75 @@ class SignalV3(Base):
     confidence = Column(Integer, default=100)
     session = relationship("SessionV3", back_populates="signals")
 
+# ── LEGACY V2 MODELS ────────────────────────────
+
 class Session(Base):
-    """Legacy V2 Session Support"""
     __tablename__ = "sessions"
-    id = Column(String, primary_key=True)
-    archetype = Column(String)
-    selected_traps = Column(Text)
-    seed = Column(Integer, default=0)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    archetype = Column(String, nullable=False)
+    selected_traps = Column(Text, nullable=False)
+    selected_categories = Column(Text, nullable=True)
+    primary_task = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    mode = Column(String, nullable=False, default="shotgun")
+    difficulty = Column(String, nullable=False, default="medium")
+    seed = Column(Integer, nullable=False, default=0)
+    campaign_id = Column(String, nullable=True)
 
 class AnalyticsLog(Base):
-    """Legacy V2 Signal Support"""
     __tablename__ = "analytics_logs"
-    id = Column(Integer, primary_key=True)
-    session_id = Column(String)
-    event_type = Column(String)
-    signal_type = Column(String)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(String, ForeignKey("sessions.id"), nullable=False)
+    event_type = Column(String, nullable=True)
+    category = Column(String, nullable=True)
+    signal_type = Column(String, nullable=False, default="triggered")
+    tier = Column(Integer, nullable=False, default=1)
+    severity = Column(String, nullable=False, default="medium")
+    triggered_at = Column(DateTime, default=datetime.utcnow)
+    user_agent = Column(String, nullable=True)
+    confidence = Column(Integer, nullable=False, default=100)
+    trigger_source = Column(String, nullable=False, default="load")
+    time_to_trigger = Column(Integer, nullable=False, default=0)
+
+class SessionState(Base):
+    __tablename__ = "session_states"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(String, ForeignKey("sessions.id"), nullable=False)
+    state_key = Column(String, nullable=False)
+    state_value = Column(Text, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class CampaignSession(Base):
+    __tablename__ = "campaign_sessions"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    campaign_id = Column(String, nullable=False)
+    session_number = Column(Integer, nullable=False)
+    session_id = Column(String, ForeignKey("sessions.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class AnalysisResult(Base):
+    __tablename__ = "analysis_results"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(String, ForeignKey("sessions.id"), nullable=False)
+    raw_output = Column(Text, nullable=False)
+    response_mode = Column(String, nullable=False)
+    elements_identified = Column(Text, nullable=False)
+    elements_acted_on = Column(Text, nullable=False)
+    elements_ignored = Column(Text, nullable=False)
+    self_awareness_score = Column(Integer, nullable=False)
+    self_awareness_explanation = Column(Text, nullable=True)
+    key_finding = Column(Text, nullable=True)
+    recommendation = Column(Text, nullable=True)
+    vulnerability_profile = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class LeaderboardEntry(Base):
+    __tablename__ = "leaderboard_entries"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(String, ForeignKey("sessions.id"), nullable=False)
+    agent_name = Column(String, nullable=False)
+    framework = Column(String, nullable=False)
+    mode = Column(String, nullable=False)
+    score = Column(Integer, nullable=False)
+    response_mode = Column(String, nullable=False)
+    submitted_at = Column(DateTime, default=datetime.utcnow)
