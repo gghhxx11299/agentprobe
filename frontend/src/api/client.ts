@@ -10,7 +10,9 @@ const api = axios.create({
 });
 
 export interface SessionCreateRequest {
-  selected_traps: string[];
+  selected_traps?: string[];
+  selected_categories?: string[];
+  primary_task?: string;
   mode?: string;
   difficulty?: string;
   archetype?: string;
@@ -23,6 +25,7 @@ export interface SessionCreateResponse {
   mode: string;
   difficulty: string;
   seed: number;
+  primary_task: string;
   created_at: string;
 }
 
@@ -33,78 +36,35 @@ export interface CampaignCreateResponse {
   archetype: string;
   mode: string;
   difficulty: string;
+  primary_task: string;
   created_at: string;
 }
 
-export interface TrapLog {
-  trap_type: string;
-  tier: number;
-  severity: string;
-  timestamp: string;
-  count: number;
-  confidence: number;
-  trigger_type: string;
-  time_to_trigger: number;
+export interface CategoryResult {
+  category: string;
+  control: boolean;
+  triggered: boolean;
+  identified: boolean;
+  score: number | null;
+  status: string;
 }
 
 export interface ResultsResponse {
   session_id: string;
-  archetype: string;
-  selected_traps: string[];
-  triggered: TrapLog[];
-  score: number;
-  mode: string;
-  difficulty: string;
-  seed: number;
-  created_at: string;
-  vulnerability_profile: {
-    instruction_resistance: number;
-    authority_calibration: number;
-    behavioral_resistance: number;
-    encoding_awareness: number;
-    multimodal_safety: number;
-    agentic_resistance: number;
-    context_integrity: number;
-  };
-}
-
-export interface ModeResponse {
-  mode: string;
-  explanation: string;
-  recommendation: string;
+  primary_task: string;
+  results: CategoryResult[];
+  overall_score: number;
+  valid_categories: number;
 }
 
 export interface AnalysisResult {
-  response_mode: string;
-  traps_identified: string[];
-  traps_acted_on: string[];
-  traps_ignored: string[];
-  self_awareness_score: number;
-  self_awareness_explanation: string;
-  key_finding: string;
-  recommendation: string;
-}
-
-export interface LeaderboardEntry {
-  id: number;
-  session_id: string;
-  agent_name: string;
-  framework: string;
-  mode: string;
-  score: number;
-  response_mode: string;
-  submitted_at: string;
-}
-
-export interface LeaderboardResponse {
-  top_entries: LeaderboardEntry[];
-  framework_stats: Record<string, {
-    count: number;
-    average_score: number;
-    best_score: number;
-    worst_score: number;
-  }>;
-  total_entries: number;
+  results: {
+    category: string;
+    identified: boolean;
+    confidence: number;
+    evidence: string;
+  }[];
+  overall_finding?: string;
 }
 
 export const createSession = async (
@@ -131,31 +91,8 @@ export const getResults = async (sessionId: string): Promise<ResultsResponse> =>
   return response.data;
 };
 
-export const getSessionMode = async (sessionId: string): Promise<ModeResponse> => {
-  const response = await api.get<ModeResponse>(`/results/${sessionId}/mode`);
-  return response.data;
-};
-
 export const analyzeOutput = async (sessionId: string, rawOutput: string): Promise<AnalysisResult> => {
   const response = await api.post<AnalysisResult>(`/results/${sessionId}/analyze`, { raw_output: rawOutput });
-  return response.data;
-};
-
-export const submitToLeaderboard = async (
-  sessionId: string,
-  agentName: string,
-  framework: string
-): Promise<LeaderboardEntry> => {
-  const response = await api.post<LeaderboardEntry>('/leaderboard/submit', {
-    session_id: sessionId,
-    agent_name: agentName,
-    framework: framework
-  });
-  return response.data;
-};
-
-export const getLeaderboard = async (): Promise<LeaderboardResponse> => {
-  const response = await api.get<LeaderboardResponse>('/leaderboard/');
   return response.data;
 };
 

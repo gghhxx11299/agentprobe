@@ -20,58 +20,71 @@ TRANSPARENT_PNG = bytes([
     0x42, 0x60, 0x82
 ])
 
-# URL_TO_TRAP is imported from trap_engine.traps
-
-
-def get_trap_name(ref: str, src: str) -> Optional[str]:
-    """Map ref+src to trap name."""
-    return URL_TO_TRAP.get((ref, src))
-
-
-def log_trap(
-    session_id: str, 
-    trap_type: str, 
+def log_signal(
+    session_id: str,
+    category: str,
+    signal_type: str,
     user_agent: Optional[str] = None,
     confidence: int = 100,
-    trigger_type: str = "load",
-    time_to_trigger: int = 0
+    trigger_source: str = "load",
+    time_to_trigger: int = 0,
+    event_type: Optional[str] = None
 ):
     from database import SessionLocal
-    from models import TrapLog
-
-    info = TRAP_INFO.get(trap_type, {"tier": 1, "severity": "medium"})
+    from models import AnalyticsLog
 
     db = SessionLocal()
     try:
-        # Check if this trap was already logged for this session
-        existing = db.query(TrapLog).filter(
-            TrapLog.session_id == session_id,
-            TrapLog.trap_type == trap_type
+        # Check if this signal was already logged for this session/category/type
+        existing = db.query(AnalyticsLog).filter(
+            AnalyticsLog.session_id == session_id,
+            AnalyticsLog.category == category,
+            AnalyticsLog.signal_type == signal_type,
+            AnalyticsLog.event_type == event_type
         ).first()
         
-        if existing:
-            # Update count only, don't duplicate
-            existing.count = getattr(existing, 'count', 1) + 1
-            db.commit()
-        else:
-            trap_log = TrapLog(
+        if not existing:
+            analytics_log = AnalyticsLog(
                 session_id=session_id,
-                trap_type=trap_type,
-                tier=info["tier"],
-                severity=info["severity"],
+                category=category,
+                event_type=event_type,
+                signal_type=signal_type,
                 triggered_at=datetime.utcnow(),
                 user_agent=user_agent,
                 confidence=confidence,
-                trigger_type=trigger_type,
+                trigger_source=trigger_source,
                 time_to_trigger=time_to_trigger
             )
-            db.add(trap_log)
+            db.add(analytics_log)
             db.commit()
     finally:
         db.close()
 
+# ── THREE SIGNAL ENDPOINTS ──────────────────────────
 
-# ── NEW DISGUISED ENDPOINT ──────────────────────────
+@router.get("/t/{session_id}/control")
+async def signal_control(session_id: str, cat: str, request: Request):
+    user_agent = request.headers.get("user-agent")
+    log_signal(session_id, cat, "control", user_agent)
+    return JSONResponse(content={"status": "ok"})
+
+@router.get("/t/{session_id}/triggered")
+async def signal_triggered(session_id: str, cat: str, request: Request, conf: int = 100, src: str = "load", time: int = 0):
+    user_agent = request.headers.get("user-agent")
+    log_signal(session_id, cat, "triggered", user_agent, confidence=conf, trigger_source=src, time_to_trigger=time)
+    return JSONResponse(content={"status": "ok"})
+
+@router.get("/t/{session_id}/identified")
+async def signal_identified(session_id: str, cat: str, request: Request, conf: int = 100):
+    user_agent = request.headers.get("user-agent")
+    log_signal(session_id, cat, "identified", user_agent, confidence=conf)
+    return JSONResponse(content={"status": "ok"})
+
+# ── DISGUISED ENDPOINT ───────────────────────
+
+def get_event_name(ref: str, src: str) -> Optional[str]:
+    """Map ref+src to event name (formerly trap name)."""
+    return URL_TO_TRAP.get((ref, src))
 
 @router.get("/t/{session_id}/evt")
 async def probe_evt(
@@ -83,70 +96,43 @@ async def probe_evt(
     trigger: Optional[str] = Query(None),
     time: Optional[int] = Query(None)
 ):
-    """Disguised analytics endpoint - maps ref+src to trap name."""
-    trap_type = get_trap_name(ref, src)
-    if not trap_type:
-        return JSONResponse(content={"status": "ok"}, status_code=200)
+    event_type = get_event_name(ref, src)
+    if not event_type:
+        return JSONResponse(content={"status": "ok"})
 
     user_agent = request.headers.get("user-agent")
-    
-    # Use provided values or defaults
     conf = confidence if confidence is not None else 100
     trig = trigger if trigger else "load"
     ttf = time if time is not None else 0
     
-    log_trap(session_id, trap_type, user_agent, conf, trig, ttf)
+    from database import SessionLocal
+    from models import AnalyticsLog
+    db = SessionLocal()
+    try:
+        existing = db.query(AnalyticsLog).filter(
+            AnalyticsLog.session_id == session_id,
+            AnalyticsLog.event_type == event_type
+        ).first()
+        if not existing:
+            info = TRAP_INFO.get(event_type, {"tier": 1, "severity": "medium"})
+            analytics_log = AnalyticsLog(
+                session_id=session_id,
+                event_type=event_type,
+                signal_type="triggered",
+                tier=info["tier"],
+                severity=info["severity"],
+                triggered_at=datetime.utcnow(),
+                user_agent=user_agent,
+                confidence=conf,
+                trigger_source=trig,
+                time_to_trigger=ttf
+            )
+            db.add(analytics_log)
+            db.commit()
+    finally:
+        db.close()
 
-    # Return transparent PNG for image requests
     accept_header = request.headers.get("accept", "")
     if "image" in accept_header:
         return Response(content=TRANSPARENT_PNG, media_type="image/png")
-
-    # Return JSON for fetch requests
-    return JSONResponse(content={"status": "ok"})
-
-
-@router.post("/t/{session_id}/evt")
-async def probe_evt_post(
-    session_id: str,
-    request: Request,
-    ref: str = Query(...),
-    src: str = Query(...),
-    confidence: Optional[int] = Query(None),
-    trigger: Optional[str] = Query(None),
-    time: Optional[int] = Query(None)
-):
-    """Disguised analytics endpoint (POST)."""
-    trap_type = get_trap_name(ref, src)
-    if not trap_type:
-        return JSONResponse(content={"status": "ok"}, status_code=200)
-
-    user_agent = request.headers.get("user-agent")
-    
-    conf = confidence if confidence is not None else 100
-    trig = trigger if trigger else "interaction"
-    ttf = time if time is not None else 0
-    
-    log_trap(session_id, trap_type, user_agent, conf, trig, ttf)
-    return JSONResponse(content={"status": "ok"})
-
-
-# ── LEGACY ENDPOINTS (kept for backward compatibility) ──────────────────────────
-
-@router.get("/{session_id}/{trap_type}")
-async def probe_trap(session_id: str, trap_type: str, request: Request):
-    user_agent = request.headers.get("user-agent")
-    log_trap(session_id, trap_type, user_agent)
-
-    accept_header = request.headers.get("accept", "")
-    if "image" in accept_header or trap_type == "ping":
-        return Response(content=TRANSPARENT_PNG, media_type="image/png")
-
-    return JSONResponse(content={"status": "ok"})
-
-
-@router.post("/{session_id}/{trap_type}")
-async def probe_trap_post(session_id: str, trap_type: str, request: Request):
-    user_agent = request.headers.get("user-agent")
-    log_trap(session_id, trap_type, user_agent)
     return JSONResponse(content={"status": "ok"})

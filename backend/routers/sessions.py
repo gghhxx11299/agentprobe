@@ -16,7 +16,9 @@ sessions_store = {}
 
 
 class SessionCreateRequest(BaseModel):
-    selected_traps: List[str]
+    selected_traps: Optional[List[str]] = None
+    selected_categories: Optional[List[str]] = None
+    primary_task: Optional[str] = None
     mode: Optional[str] = "shotgun"  # shotgun/sniper/campaign/blind
     difficulty: Optional[str] = "medium"  # easy/medium/hard/mixed
     archetype: Optional[str] = None
@@ -29,6 +31,7 @@ class SessionCreateResponse(BaseModel):
     mode: str
     difficulty: str
     seed: int
+    primary_task: Optional[str]
     created_at: str
 
 
@@ -39,6 +42,7 @@ class CampaignCreateResponse(BaseModel):
     archetype: str
     mode: str
     difficulty: str
+    primary_task: Optional[str]
     created_at: str
 
 
@@ -75,19 +79,23 @@ async def create_session(request: SessionCreateRequest):
     difficulty = request.difficulty or "medium"
     archetype = request.archetype or random.choice(["ecommerce", "saas", "banking", "government"])
     
+    # v2: Handle categories and primary task
+    selected_categories = request.selected_categories or []
+    primary_task = request.primary_task
+    
+    # v1 legacy support
+    selected_traps = request.selected_traps or []
+    
     # Select traps based on mode
     if mode == "sniper":
-        # Select exactly ONE trap randomly
-        selected_trap = random.choice(request.selected_traps)
-        selected_traps = [selected_trap]
+        if selected_categories:
+            selected_categories = [random.choice(selected_categories)]
+        if selected_traps:
+            selected_traps = [random.choice(selected_traps)]
     elif mode == "blind":
-        # Randomly select trap categories based on difficulty
-        selected_traps = [t for t in request.selected_traps if select_trap_for_difficulty(t, difficulty)]
-        if not selected_traps:
-            selected_traps = request.selected_traps[:5]  # Fallback to first 5
-    else:
-        # shotgun or campaign - use all selected traps
-        selected_traps = request.selected_traps
+        if selected_categories:
+            random.shuffle(selected_categories)
+            selected_categories = selected_categories[:2]
     
     random.seed()  # Reset random state
     
@@ -97,6 +105,8 @@ async def create_session(request: SessionCreateRequest):
             id=session_id,
             archetype=archetype,
             selected_traps=json.dumps(selected_traps),
+            selected_categories=json.dumps(selected_categories),
+            primary_task=primary_task,
             created_at=datetime.utcnow(),
             mode=mode,
             difficulty=difficulty,
@@ -118,6 +128,7 @@ async def create_session(request: SessionCreateRequest):
         mode=mode,
         difficulty=difficulty,
         seed=seed,
+        primary_task=primary_task,
         created_at=datetime.utcnow().isoformat()
     )
 
@@ -134,30 +145,35 @@ async def create_campaign(request: SessionCreateRequest):
     
     archetype = request.archetype or random.choice(["ecommerce", "saas", "banking", "government"])
     difficulty = request.difficulty or "medium"
+    primary_task = request.primary_task
     
-    # Shuffle and select 5 traps for the campaign
-    shuffled_traps = request.selected_traps.copy()
-    random.shuffle(shuffled_traps)
-    campaign_traps = shuffled_traps[:5]
+    # Select categories/traps for campaign
+    shuffled_items = (request.selected_categories or request.selected_traps or []).copy()
+    random.shuffle(shuffled_items)
+    campaign_items = shuffled_items[:5]
     
-    if len(campaign_traps) < 5:
-        # If fewer than 5 traps selected, repeat some
-        while len(campaign_traps) < 5:
-            campaign_traps.append(random.choice(request.selected_traps))
+    if len(campaign_items) < 5 and shuffled_items:
+        while len(campaign_items) < 5:
+            campaign_items.append(random.choice(shuffled_items))
     
     session_ids = []
     target_urls = []
     
     db = SessionLocal()
     try:
-        for i, trap in enumerate(campaign_traps):
+        for i, item in enumerate(campaign_items):
             session_id = str(uuid.uuid4())
-            session_seed = seed + i  # Related seed for reproducibility
+            session_seed = seed + i
+            
+            # Check if item is category or trap
+            is_category = request.selected_categories and item in request.selected_categories
             
             session = SessionModel(
                 id=session_id,
                 archetype=archetype,
-                selected_traps=json.dumps([trap]),
+                selected_traps=json.dumps([item] if not is_category else []),
+                selected_categories=json.dumps([item] if is_category else []),
+                primary_task=primary_task,
                 created_at=datetime.utcnow(),
                 mode="campaign",
                 difficulty=difficulty,
@@ -191,6 +207,7 @@ async def create_campaign(request: SessionCreateRequest):
         archetype=archetype,
         mode="campaign",
         difficulty=difficulty,
+        primary_task=primary_task,
         created_at=datetime.utcnow().isoformat()
     )
 
@@ -213,6 +230,8 @@ async def retest_session(session_id: str):
             id=new_session_id,
             archetype=original.archetype,
             selected_traps=original.selected_traps,
+            selected_categories=original.selected_categories,
+            primary_task=original.primary_task,
             created_at=datetime.utcnow(),
             mode=original.mode,
             difficulty=original.difficulty,
@@ -230,6 +249,7 @@ async def retest_session(session_id: str):
             "mode": original.mode,
             "difficulty": original.difficulty,
             "seed": original.seed,
+            "primary_task": original.primary_task,
             "created_at": datetime.utcnow().isoformat()
         }
     finally:
