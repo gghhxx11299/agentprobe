@@ -8,13 +8,19 @@ from routers import v2, v3, sessions, probe, results, leaderboard, debug, state
 
 app = FastAPI(title="AgentProbe API - Multi-Version Entry Point")
 
-# Unified CORS for all versions
-ALLOWED_ORIGINS = ["*", "https://gghhxx11299.github.io"]
+# Explicit CORS: Browsers block credentials if origin is "*"
+# We must list the specific domains.
+ALLOWED_ORIGINS = [
+    "https://gghhxx11299.github.io",
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
 )
 
@@ -30,7 +36,6 @@ app.include_router(state.router, prefix="/state", tags=["state"])
 app.include_router(v2.router) # /v2/test/...
 app.include_router(v3.router) # /v3/test/...
 
-# HEALTH CHECK (Required by Render)
 @app.get("/health")
 def health():
     return {"status": "all_systems_go", "v2": "active", "v3": "active"}
@@ -40,7 +45,6 @@ def health():
 async def legacy_redirect(session_id: str, archetype: str):
     return RedirectResponse(url=f"/v2/test/{session_id}/{archetype}")
 
-# Root redirection to dashboard
 @app.get("/")
 def read_root():
     return RedirectResponse(url="https://gghhxx11299.github.io")
