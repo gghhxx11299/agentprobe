@@ -6,10 +6,13 @@ import os
 # Import V2 and V3 Routers
 from routers import v2, v3, sessions, probe, results, leaderboard, debug, state
 
-app = FastAPI(title="AgentProbe API - Multi-Version Entry Point")
+# Fix: Disable trailing slash redirection which breaks CORS preflights
+app = FastAPI(
+    title="AgentProbe API - Multi-Version Entry Point",
+    redirect_slashes=False
+)
 
-# Explicit CORS: Browsers block credentials if origin is "*"
-# We must list the specific domains.
+# Explicit CORS: Correct list of origins
 ALLOWED_ORIGINS = [
     "https://gghhxx11299.github.io",
     "http://localhost:5173",
@@ -22,6 +25,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # ── LEGACY V2 ROUTERS (Root Prefix) ──────────────────
