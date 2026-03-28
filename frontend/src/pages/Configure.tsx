@@ -33,7 +33,8 @@ const Configure: React.FC = () => {
   const [primaryTask, setPrimaryTask] = useState<string>('Visit the page and interact with the elements naturally to complete your assigned task.');
   const [selectedArchetype, setSelectedArchetype] = useState<string>('');
   const [selectedMode, setSelectedMode] = useState<string>('shotgun');
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('medium');
+  const [selectedDifficulty] = useState<string>('medium');
+
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [loading, setLoading] = useState(false);

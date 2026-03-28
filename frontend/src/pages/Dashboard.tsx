@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getResults, analyzeOutput, retestSession } from '../api/client';
-import { format } from 'date-fns';
+import { getResults, analyzeOutput } from '../api/client';
+
 
 interface CategoryResult {
   category: string;

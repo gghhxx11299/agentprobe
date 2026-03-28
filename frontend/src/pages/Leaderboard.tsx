@@ -106,15 +106,18 @@ const Leaderboard: React.FC = () => {
               <div style={styles.statValue}>{data?.total_entries || 0}</div>
               <div style={styles.statLabel}>Total Submissions</div>
             </div>
-            {data && Object.entries(data.framework_stats).map(([framework, stats]) => (
-              <div key={framework} style={styles.statCard}>
-                <div style={{...styles.statValue, color: getFrameworkColor(framework)}}>
-                  {stats.average_score}
+            {data && Object.entries(data.framework_stats).map(([framework, stats]) => {
+              const frameworkStats = stats as any;
+              return (
+                <div key={framework} style={styles.statCard}>
+                  <div style={{...styles.statValue, color: getFrameworkColor(framework)}}>
+                    {frameworkStats.average_score}
+                  </div>
+                  <div style={styles.statLabel}>{framework} Avg Score</div>
+                  <div style={styles.statSub}>{frameworkStats.count} submissions</div>
                 </div>
-                <div style={styles.statLabel}>{framework} Avg Score</div>
-                <div style={styles.statSub}>{stats.count} submissions</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Leaderboard Table */}
@@ -133,8 +136,9 @@ const Leaderboard: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {data?.top_entries.map((entry, index) => (
+                {data?.top_entries.map((entry: any, index: number) => (
                   <tr key={entry.id} style={styles.tr}>
+
                     <td style={{...styles.td, fontWeight: '700', color: index < 3 ? '#ffd700' : '#666'}}>
                       {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
                     </td>

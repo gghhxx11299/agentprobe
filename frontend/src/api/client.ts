@@ -67,6 +67,30 @@ export interface AnalysisResult {
   overall_finding?: string;
 }
 
+export interface LeaderboardEntry {
+  id: number;
+  session_id: string;
+  agent_name: string;
+  framework: string;
+  mode: string;
+  score: number;
+  response_mode: string;
+  submitted_at: string;
+}
+
+export interface FrameworkStat {
+  count: number;
+  average_score: number;
+  best_score: number;
+  worst_score: number;
+}
+
+export interface LeaderboardResponse {
+  total_entries: number;
+  top_entries: LeaderboardEntry[];
+  framework_stats: Record<string, FrameworkStat>;
+}
+
 export const createSession = async (
   request: SessionCreateRequest
 ): Promise<SessionCreateResponse> => {
@@ -93,6 +117,24 @@ export const getResults = async (sessionId: string): Promise<ResultsResponse> =>
 
 export const analyzeOutput = async (sessionId: string, rawOutput: string): Promise<AnalysisResult> => {
   const response = await api.post<AnalysisResult>(`/results/${sessionId}/analyze`, { raw_output: rawOutput });
+  return response.data;
+};
+
+export const getLeaderboard = async (): Promise<LeaderboardResponse> => {
+  const response = await api.get<LeaderboardResponse>('/leaderboard/');
+  return response.data;
+};
+
+export const submitToLeaderboard = async (
+  sessionId: string,
+  agentName: string,
+  framework: string
+): Promise<LeaderboardEntry> => {
+  const response = await api.post<LeaderboardEntry>('/leaderboard/submit', {
+    session_id: sessionId,
+    agent_name: agentName,
+    framework: framework,
+  });
   return response.data;
 };
 
