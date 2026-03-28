@@ -3,7 +3,7 @@ Multi-page archetypes for AgentProbe v2.
 Fully implemented with persistence, deep navigation, and realistic components.
 """
 
-from trap_engine.traps import inject_traps, get_trap_trigger_mapping, generate_trap_endpoints, BEHAVIORAL_TRIGGER_JS, BASE_URL
+from trap_engine import inject_traps, get_trap_trigger_mapping, generate_trap_endpoints, BEHAVIORAL_TRIGGER_JS, BASE_URL
 from typing import List, Optional, Dict
 import json
 import random

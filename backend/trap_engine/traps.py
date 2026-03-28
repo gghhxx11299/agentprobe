@@ -251,6 +251,22 @@ URL_TO_TRAP = {
     ("frm", "embed"): "cross_frame",
 }
 
+ALL_TRAPS = list(TRAP_INFO.keys())
+LOAD_TRAPS = [
+    "hidden_text_injection", 
+    "authority_spoof", 
+    "ping", 
+    "robots_txt_spoof", 
+    "homoglyph", 
+    "html_comment", 
+    "meta_inject", 
+    "base64_encoded", 
+    "image_text", 
+    "alt_text_injection", 
+    "svg_instruction"
+]
+
+
 BEHAVIORAL_TRIGGER_JS = """
 <script>
 (function() {

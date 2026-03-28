@@ -95,7 +95,7 @@ async def startup_event():
 async def get_test_page(session_id: str, request: Request, archetype: str = "shop"):
     """Serve multi-page archetype test pages with state persistence and signal logging."""
     from trap_engine.multiframe import render_multiframe_page
-    from trap_engine.traps import ALL_TRAPS, LOAD_TRAPS, URL_TO_TRAP, TRAP_INFO
+    from trap_engine import ALL_TRAPS, LOAD_TRAPS, URL_TO_TRAP, TRAP_INFO
     from database import SessionLocal
     from models import Session as SessionModel, AnalyticsLog
     from routers.state import get_session_state_internal

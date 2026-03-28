@@ -3,7 +3,7 @@ from fastapi.responses import Response, JSONResponse, HTMLResponse
 from datetime import datetime
 from typing import Optional
 
-from trap_engine.traps import TRAP_INFO, URL_TO_TRAP
+from trap_engine import TRAP_INFO, URL_TO_TRAP
 
 router = APIRouter()
 

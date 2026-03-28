@@ -33,7 +33,7 @@ def render_multiframe_page(archetype: str, session_id: str, selected_traps: List
         render_crypto_page,
         render_realestate_page
     )
-    from trap_engine.traps import inject_category_traps
+    from trap_engine import inject_category_traps
     
     renderers: Dict[str, Callable] = {
         "ecommerce": render_shopnest_page,

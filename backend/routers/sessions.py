@@ -7,7 +7,7 @@ import random
 import uuid
 import hashlib
 
-from trap_engine.traps import BASE_URL
+from trap_engine import BASE_URL
 
 router = APIRouter()
 
@@ -118,7 +118,7 @@ async def create_session(request: SessionCreateRequest):
     finally:
         db.close()
 
-    from trap_engine.traps import BASE_URL
+    from trap_engine import BASE_URL
     target_url = f"{BASE_URL}/test/{session_id}"
 
     return SessionCreateResponse(
@@ -241,7 +241,7 @@ async def retest_session(session_id: str):
         db.add(session)
         db.commit()
         
-        from trap_engine.traps import BASE_URL
+        from trap_engine import BASE_URL
         return {
             "session_id": new_session_id,
             "target_url": f"{BASE_URL}/test/{new_session_id}",
