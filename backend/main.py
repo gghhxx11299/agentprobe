@@ -5,6 +5,7 @@ import os
 
 # Import V2 and V3 Routers
 from routers import v2, v3, sessions, probe, results, leaderboard, debug, state
+from database import init_db
 
 # Fix: Disable trailing slash redirection which breaks CORS preflights
 app = FastAPI(
@@ -27,6 +28,10 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
+
+@app.on_event("startup")
+def startup_event():
+    init_db()
 
 # ── LEGACY V2 ROUTERS (Root Prefix) ──────────────────
 app.include_router(results.router, prefix="/results", tags=["results"])
