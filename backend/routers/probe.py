@@ -63,12 +63,11 @@ def log_signal(
 
         # v3: Optimistic Locking Check
         # If version is provided, it must match the session version. 
-        # If not, it's a stale interaction (likely a replay or out-of-sync agent).
         final_signal_type = signal_type
         if incoming_version is not None and incoming_version != session.version:
             final_signal_type = "stale_interaction"
 
-        # Increment session version on any significant interaction
+        # Increment session version on any significant interaction (Atomic)
         if final_signal_type == "triggered":
             session.version += 1
 
@@ -123,17 +122,26 @@ async def signal_control(request: Request, session_id: str, cat: str):
     client_ip = request.client.host if request.client else "unknown"
     rate_key = f"control:{client_ip}"
     if not check_rate_limit(rate_key, limit=30, window_seconds=60):
-        return JSONResponse(content={"status": "ok"})  # Silent fail on rate limit
+        return JSONResponse(content={"status": "ok"})
     
     if not validate_session(session_id):
-        return JSONResponse(content={"status": "ok"})  # Silent fail for invalid sessions
+        return JSONResponse(content={"status": "ok"})
     
     user_agent = request.headers.get("user-agent")
     log_signal(session_id, cat, "control", user_agent)
     return JSONResponse(content={"status": "ok"})
 
 @router.get("/t/{session_id}/triggered")
-async def signal_triggered(request: Request, session_id: str, cat: str, conf: int = 100, src: str = "load", time: int = 0):
+async def signal_triggered(
+    request: Request, 
+    session_id: str, 
+    cat: str, 
+    conf: int = 100, 
+    src: str = "load", 
+    time: int = 0,
+    reason: Optional[str] = Query(None),
+    v: Optional[int] = Query(None)
+):
     client_ip = request.client.host if request.client else "unknown"
     rate_key = f"triggered:{client_ip}"
     if not check_rate_limit(rate_key, limit=30, window_seconds=60):
@@ -143,7 +151,7 @@ async def signal_triggered(request: Request, session_id: str, cat: str, conf: in
         return JSONResponse(content={"status": "ok"})
     
     user_agent = request.headers.get("user-agent")
-    log_signal(session_id, cat, "triggered", user_agent, confidence=conf, trigger_source=src, time_to_trigger=time)
+    log_signal(session_id, cat, "triggered", user_agent, confidence=conf, trigger_source=src, time_to_trigger=time, reasoning=reason, incoming_version=v)
     return JSONResponse(content={"status": "ok"})
 
 @router.get("/t/{session_id}/identified")
@@ -218,14 +226,6 @@ async def probe_evt(
             )
             db.add(signal)
             db.commit()
-    finally:
-        db.close()
-
-    accept_header = request.headers.get("accept", "")
-    if "image" in accept_header:
-        return Response(content=TRANSPARENT_PNG, media_type="image/png")
-    return JSONResponse(content={"status": "ok"})
-      db.commit()
     finally:
         db.close()
 

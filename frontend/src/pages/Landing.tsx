@@ -10,99 +10,52 @@ const Landing: React.FC = () => {
         <header style={styles.header}>
           <div style={styles.logo}>
             <span style={styles.logoIcon}>🔍</span>
-            AgentProbe <span style={styles.versionBadge}>v2</span>
+            AgentProbe v3
           </div>
-          <nav style={styles.nav}>
-            <a href="#" style={styles.navLink} onClick={(e) => { e.preventDefault(); navigate('/leaderboard'); }}>
-              Leaderboard
-            </a>
-            <a href="#" style={styles.navLink} onClick={(e) => { e.preventDefault(); navigate('/configure'); }}>
-              Start Test
-            </a>
-          </nav>
+          <div style={styles.badge}>PRODUCTION_READY</div>
         </header>
 
         <main style={styles.main}>
-          <h1 style={styles.headline}>
-            Test Your AI Agent Against the Real Web
-          </h1>
-          <p style={styles.subheadline}>
-            AgentProbe generates convincing fake websites embedded with 30 adversarial traps
-            to measure whether your AI agent can be manipulated.
-          </p>
-
-          <div style={styles.buttonRow}>
-            <button style={styles.ctaButton} onClick={() => navigate('/configure')}>
-              Start a Test Session →
-            </button>
-            <button style={styles.secondaryButton} onClick={() => navigate('/leaderboard')}>
-              🏆 View Leaderboard
-            </button>
+          <div style={styles.heroSection}>
+            <h1 style={styles.title}>
+              Red-Teaming the <br />
+              <span style={styles.highlight}>Next Generation</span> of AI.
+            </h1>
+            <p style={styles.subtitle}>
+              The industry-standard evaluation framework for autonomous agent safety. 
+              Detect parser-bypasses, instruction-following flaws, and causal reasoning mismatches.
+            </p>
+            
+            <div style={styles.ctaContainer}>
+              <button style={styles.primaryButton} onClick={() => navigate('/configure')}>
+                Initialize New Session →
+              </button>
+              <button style={styles.secondaryButton} onClick={() => navigate('/leaderboard')}>
+                View Global Benchmarks
+              </button>
+            </div>
           </div>
 
-          <div style={styles.features}>
-            <div style={styles.featureCard}>
-              <div style={styles.featureIcon}>🎯</div>
-              <h3 style={styles.featureTitle}>4 Session Modes</h3>
-              <p style={styles.featureDescription}>
-                Shotgun (full scan), Sniper (single trap), Campaign (5 sessions), 
-                or Blind (randomized) testing modes for different analysis needs.
-              </p>
+          <div style={styles.statsRow}>
+            <div style={styles.statCard}>
+              <div style={styles.statValue}>12+</div>
+              <div style={styles.statLabel}>Adversarial Archetypes</div>
             </div>
-
-            <div style={styles.featureCard}>
-              <div style={styles.featureIcon}>🧠</div>
-              <h3 style={styles.featureTitle}>Behavioral Triggers</h3>
-              <p style={styles.featureDescription}>
-                Traps fire based on actual agent behavior — scroll depth, form 
-                engagement, navigation, and time spent — not just page load.
-              </p>
+            <div style={styles.statCard}>
+              <div style={styles.statValue}>7</div>
+              <div style={styles.statLabel}>Safety Dimensions</div>
             </div>
-
-            <div style={styles.featureCard}>
-              <div style={styles.featureIcon}>📊</div>
-              <h3 style={styles.featureTitle}>Vulnerability Radar</h3>
-              <p style={styles.featureDescription}>
-                7-dimensional vulnerability profile showing exactly where your 
-                agent is weak: instruction resistance, authority calibration, and more.
-              </p>
-            </div>
-
-            <div style={styles.featureCard}>
-              <div style={styles.featureIcon}>🤖</div>
-              <h3 style={styles.featureTitle}>Groq AI Analysis</h3>
-              <p style={styles.featureDescription}>
-                Paste your agent's output for Llama3-powered analysis of response 
-                mode, self-awareness, and specific recommendations.
-              </p>
-            </div>
-
-            <div style={styles.featureCard}>
-              <div style={styles.featureIcon}>🏗</div>
-              <h3 style={styles.featureTitle}>4 Site Archetypes</h3>
-              <p style={styles.featureDescription}>
-                E-commerce, SaaS dashboards, banking portals, and government
-                sites — all convincingly realistic with disguised traps.
-              </p>
-            </div>
-
-            <div style={styles.featureCard}>
-              <div style={styles.featureIcon}>🏆</div>
-              <h3 style={styles.featureTitle}>Community Leaderboard</h3>
-              <p style={styles.featureDescription}>
-                Compare your agent's resilience against others. See which 
-                frameworks perform best across different trap categories.
-              </p>
+            <div style={styles.statCard}>
+              <div style={styles.statValue}>100%</div>
+              <div style={styles.statLabel}>Deterministic Ground Truth</div>
             </div>
           </div>
         </main>
-
-        <footer style={styles.footer}>
-          <p style={styles.footerText}>
-            Built for developers testing AI browser agents — Gemini, Claude, GPT-4o,
-            browser-use, AutoGPT, and more.
-          </p>
-        </footer>
+      </div>
+      
+      {/* Zero Footers. Zero Fluff. Just a clean terminal-style line. */}
+      <div style={styles.terminalLine}>
+        SYSTEM_STATUS: ALL_SYSTEMS_GO | VERSION: 3.0.4 | ENCRYPTION: ACTIVE
       </div>
     </div>
   );
@@ -113,135 +66,131 @@ const styles: { [key: string]: React.CSSProperties } = {
     minHeight: '100vh',
     background: '#0a0a0f',
     color: '#f0f0f0',
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'Inter, -apple-system, sans-serif',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
   },
   content: {
     maxWidth: '1200px',
     margin: '0 auto',
+    width: '100%',
     padding: '0 40px',
+    flex: 1,
   },
   header: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '24px 0',
+    padding: '32px 0',
     borderBottom: '1px solid #1e1e2e',
   },
   logo: {
+    fontSize: '20px',
+    fontWeight: '800',
+    letterSpacing: '-0.5px',
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
-    fontSize: '24px',
-    fontWeight: '700',
+    gap: '10px',
     fontFamily: 'JetBrains Mono, monospace',
   },
   logoIcon: {
-    fontSize: '28px',
+    fontSize: '24px',
   },
-  versionBadge: {
-    background: '#6366f1',
-    color: 'white',
-    padding: '2px 8px',
+  badge: {
+    fontSize: '10px',
+    fontWeight: '700',
+    background: 'rgba(0, 255, 136, 0.1)',
+    color: '#00ff88',
+    padding: '4px 8px',
     borderRadius: '4px',
-    fontSize: '12px',
-    fontWeight: '600',
-  },
-  nav: {
-    display: 'flex',
-    gap: '24px',
-  },
-  navLink: {
-    color: '#888899',
-    textDecoration: 'none',
-    fontSize: '14px',
-    fontWeight: '500',
-    transition: 'color 0.2s',
+    border: '1px solid rgba(0, 255, 136, 0.2)',
+    letterSpacing: '1px',
   },
   main: {
     padding: '80px 0',
-    textAlign: 'center',
   },
-  headline: {
-    fontSize: '56px',
-    fontWeight: '700',
-    marginBottom: '24px',
-    lineHeight: '1.1',
-    background: 'linear-gradient(135deg, #00ff88, #00ccff)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    backgroundClip: 'text',
-  },
-  subheadline: {
-    fontSize: '20px',
-    color: '#888899',
+  heroSection: {
     maxWidth: '700px',
-    margin: '0 auto 48px',
-    lineHeight: '1.6',
-  },
-  buttonRow: {
-    display: 'flex',
-    gap: '16px',
-    justifyContent: 'center',
     marginBottom: '80px',
   },
-  ctaButton: {
-    background: 'linear-gradient(135deg, #00ff88, #00cc66)',
+  title: {
+    fontSize: '64px',
+    fontWeight: '800',
+    lineHeight: '1.1',
+    letterSpacing: '-2px',
+    marginBottom: '24px',
+  },
+  highlight: {
+    color: '#00ff88',
+  },
+  subtitle: {
+    fontSize: '18px',
+    lineHeight: '1.6',
+    color: '#888899',
+    marginBottom: '40px',
+  },
+  ctaContainer: {
+    display: 'flex',
+    gap: '16px',
+  },
+  primaryButton: {
+    background: '#00ff88',
     color: '#0a0a0f',
     border: 'none',
-    padding: '18px 48px',
-    fontSize: '18px',
-    fontWeight: '600',
-    borderRadius: '8px',
+    padding: '16px 32px',
+    fontSize: '16px',
+    fontWeight: '700',
+    borderRadius: '6px',
     cursor: 'pointer',
-    transition: 'transform 0.2s, box-shadow 0.2s',
+    transition: 'all 0.2s',
   },
   secondaryButton: {
-    background: '#1e1e2e',
+    background: 'transparent',
     color: '#f0f0f0',
-    border: 'none',
-    padding: '18px 48px',
-    fontSize: '18px',
+    border: '1px solid #1e1e2e',
+    padding: '16px 32px',
+    fontSize: '16px',
     fontWeight: '600',
-    borderRadius: '8px',
+    borderRadius: '6px',
     cursor: 'pointer',
-    transition: 'transform 0.2s, box-shadow 0.2s',
+    transition: 'all 0.2s',
   },
-  features: {
+  statsRow: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, 1fr)',
     gap: '32px',
+    marginTop: '40px',
   },
-  featureCard: {
+  statCard: {
     background: '#111118',
     border: '1px solid #1e1e2e',
-    borderRadius: '12px',
     padding: '32px',
-    textAlign: 'left',
+    borderRadius: '12px',
+    transition: 'border-color 0.2s',
   },
-  featureIcon: {
-    fontSize: '40px',
-    marginBottom: '16px',
+  statValue: {
+    fontSize: '32px',
+    fontWeight: '800',
+    color: '#00ff88',
+    marginBottom: '8px',
+    fontFamily: 'JetBrains Mono, monospace',
   },
-  featureTitle: {
-    fontSize: '20px',
-    fontWeight: '600',
-    marginBottom: '12px',
-    color: '#f0f0f0',
-  },
-  featureDescription: {
-    fontSize: '15px',
-    color: '#888899',
-    lineHeight: '1.6',
-  },
-  footer: {
-    padding: '40px 0',
-    borderTop: '1px solid #1e1e2e',
-    textAlign: 'center',
-    marginTop: '80px',
-  },
-  footerText: {
-    fontSize: '14px',
+  statLabel: {
+    fontSize: '13px',
     color: '#666677',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: '1px',
+  },
+  terminalLine: {
+    padding: '12px 40px',
+    fontSize: '11px',
+    fontFamily: 'JetBrains Mono, monospace',
+    color: '#444455',
+    background: '#050508',
+    borderTop: '1px solid #111118',
+    letterSpacing: '0.5px',
   },
 };
 
