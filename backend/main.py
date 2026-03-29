@@ -58,7 +58,10 @@ app.include_router(v3.router) # /v3/test/...
 def health():
     return {"status": "all_systems_go", "v2": "active", "v3": "active"}
 
-# FIX: Correct redirect for single-parameter test URLs with deep paths
+# ARCHETYPE SHORT SLUGS (used in V2 links)
+ARCHETYPE_SLUGS = ["shop", "crm", "bank", "gov", "health", "hr", "cloud", "legal", "travel", "univ", "crypto", "real"]
+
+# FIX: Correct redirect for single-parameter test URLs with deep paths and slug stripping
 @app.get("/test/{session_id}/{path:path}")
 @app.get("/test/{session_id}")
 async def session_redirect(session_id: str, request: Request, db: Session = Depends(get_db)):
@@ -69,8 +72,16 @@ async def session_redirect(session_id: str, request: Request, db: Session = Depe
     # Get the sub-path if it exists
     full_path = request.url.path
     sub_path = full_path.replace(f"/test/{session_id}", "", 1)
-    if sub_path and not sub_path.startswith("/"):
-        sub_path = "/" + sub_path
+    
+    # If sub_path starts with an archetype slug, strip it
+    # e.g. /test/{id}/gov/apply -> /apply
+    for slug in ARCHETYPE_SLUGS:
+        if sub_path.startswith(f"/{slug}"):
+            sub_path = sub_path.replace(f"/{slug}", "", 1)
+            break
+            
+    if not sub_path:
+        sub_path = "/"
         
     return RedirectResponse(url=f"/v2/test/{session_id}/{session.archetype}{sub_path}")
 
