@@ -1,6 +1,20 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Detect API URL: 
+// 1. Environment variable
+// 2. Same host as the frontend (but on port 8000 for backend)
+// 3. Fallback to localhost:8000
+const getApiUrl = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  
+  if (window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1')) {
+    return 'https://agentprobe-backend.onrender.com';
+  }
+  
+  return `http://${window.location.hostname}:8000`;
+};
+
+const API_URL = getApiUrl();
 
 const api = axios.create({
   baseURL: API_URL,

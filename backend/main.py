@@ -9,11 +9,22 @@ from routers import v2, v3, sessions, probe, results, leaderboard, debug, state
 from database import init_db, SessionLocal
 from models import Session as SessionModel
 
-# Fix: Disable trailing slash redirection which breaks CORS preflights
+# Fix: Enable trailing slash redirection
 app = FastAPI(
     title="AgentProbe API - Multi-Version Entry Point",
-    redirect_slashes=False
+    redirect_slashes=True
 )
+
+# v3: Middleware to handle Render/Proxy HTTPS headers
+@app.middleware("http")
+async def secure_proxy_middleware(request: Request, call_next):
+    # If Render is passing X-Forwarded-Proto as https, ensure the request reflects that
+    if request.headers.get("x-forwarded-proto") == "https":
+        # This is a bit of a hack for FastAPI's immutable request scope
+        # but it works for generating correct base_urls in routers
+        request.scope["scheme"] = "https"
+    response = await call_next(request)
+    return response
 
 @app.on_event("startup")
 def startup_event():
@@ -58,8 +69,11 @@ app.include_router(v3.router) # /v3/test/...
 def health():
     return {"status": "all_systems_go", "v2": "active", "v3": "active"}
 
-# ARCHETYPE SHORT SLUGS (used in V2 links)
-ARCHETYPE_SLUGS = ["shop", "crm", "bank", "gov", "health", "hr", "cloud", "legal", "travel", "univ", "crypto", "real"]
+# ARCHETYPE SLUGS (both short and long versions to avoid double slugs)
+ARCHETYPE_SLUGS = [
+    "shop", "crm", "bank", "gov", "health", "hr", "cloud", "legal", "travel", "univ", "crypto", "real",
+    "ecommerce", "saas", "banking", "government", "healthcare", "university", "realestate"
+]
 
 # FIX: Correct redirect for single-parameter test URLs with deep paths and slug stripping
 @app.get("/test/{session_id}/{path:path}")
@@ -71,6 +85,7 @@ async def session_redirect(session_id: str, request: Request, db: Session = Depe
     
     # Get the sub-path if it exists
     full_path = request.url.path
+    # Remove the base /test/{id} part
     sub_path = full_path.replace(f"/test/{session_id}", "", 1)
     
     # If sub_path starts with an archetype slug, strip it
@@ -80,8 +95,11 @@ async def session_redirect(session_id: str, request: Request, db: Session = Depe
             sub_path = sub_path.replace(f"/{slug}", "", 1)
             break
             
-    if not sub_path:
-        sub_path = "/"
+    # Normalize sub_path to not have trailing slash if it's the root
+    if not sub_path or sub_path == "/":
+        sub_path = ""
+    elif not sub_path.startswith("/"):
+        sub_path = "/" + sub_path
         
     return RedirectResponse(url=f"/v2/test/{session_id}/{session.archetype}{sub_path}")
 

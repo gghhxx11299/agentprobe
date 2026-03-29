@@ -49,48 +49,68 @@ def log_signal(
     confidence: int = 100,
     trigger_source: str = "load",
     time_to_trigger: int = 0,
-    event_type: Optional[str] = None
+    event_type: Optional[str] = None,
+    reasoning: Optional[str] = None,
+    incoming_version: Optional[int] = None
 ):
     from database import SessionLocal
-    from models import AnalyticsLog
+    from models import Session as SessionModel, Signal
 
     db = SessionLocal()
     try:
-        # Check if this signal was already logged for this session/category/type
-        existing = db.query(AnalyticsLog).filter(
-            AnalyticsLog.session_id == session_id,
-            AnalyticsLog.category == category,
-            AnalyticsLog.signal_type == signal_type,
-            AnalyticsLog.event_type == event_type
-        ).first()
+        session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
+        if not session: return
 
-        if not existing:
-            analytics_log = AnalyticsLog(
-                session_id=session_id,
-                category=category,
-                event_type=event_type,
-                signal_type=signal_type,
-                triggered_at=datetime.utcnow(),
-                user_agent=user_agent,
-                confidence=confidence,
-                trigger_source=trigger_source,
-                time_to_trigger=time_to_trigger
-            )
-            db.add(analytics_log)
-            db.commit()
+        # v3: Optimistic Locking Check
+        # If version is provided, it must match the session version. 
+        # If not, it's a stale interaction (likely a replay or out-of-sync agent).
+        final_signal_type = signal_type
+        if incoming_version is not None and incoming_version != session.version:
+            final_signal_type = "stale_interaction"
+
+        # Increment session version on any significant interaction
+        if final_signal_type == "triggered":
+            session.version += 1
+
+        signal = Signal(
+            session_id=session_id,
+            category=category,
+            event_type=event_type,
+            signal_type=final_signal_type,
+            reasoning=reasoning,
+            version_at_trigger=incoming_version or session.version,
+            triggered_at=datetime.utcnow(),
+            user_agent=user_agent,
+            confidence=confidence,
+            trigger_source=trigger_source,
+            time_to_trigger=time_to_trigger
+        )
+        db.add(signal)
+        db.commit()
     finally:
         db.close()
 
 
+# Simple in-memory cache for valid session IDs to avoid DB hits on every ping
+_valid_sessions_cache = {}
+
 def validate_session(session_id: str) -> bool:
-    """Quick validation that session exists without full DB overhead."""
+    """Validate session existence with 60-second in-memory caching."""
+    now = datetime.utcnow()
+    if session_id in _valid_sessions_cache:
+        cached_time, is_valid = _valid_sessions_cache[session_id]
+        if now - cached_time < timedelta(seconds=60):
+            return is_valid
+
     from database import SessionLocal
     from models import Session as SessionModel
     
     db = SessionLocal()
     try:
         session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
-        return session is not None
+        is_valid = session is not None
+        _valid_sessions_cache[session_id] = (now, is_valid)
+        return is_valid
     finally:
         db.close()
 
@@ -175,16 +195,16 @@ async def probe_evt(
     ttf = time if time is not None else 0
 
     from database import SessionLocal
-    from models import AnalyticsLog
+    from models import Signal
     db = SessionLocal()
     try:
-        existing = db.query(AnalyticsLog).filter(
-            AnalyticsLog.session_id == session_id,
-            AnalyticsLog.event_type == event_type
+        existing = db.query(Signal).filter(
+            Signal.session_id == session_id,
+            Signal.event_type == event_type
         ).first()
         if not existing:
             info = TRAP_INFO.get(event_type, {"tier": 1, "severity": "medium"})
-            analytics_log = AnalyticsLog(
+            signal = Signal(
                 session_id=session_id,
                 event_type=event_type,
                 signal_type="triggered",
@@ -196,8 +216,16 @@ async def probe_evt(
                 trigger_source=trig,
                 time_to_trigger=ttf
             )
-            db.add(analytics_log)
+            db.add(signal)
             db.commit()
+    finally:
+        db.close()
+
+    accept_header = request.headers.get("accept", "")
+    if "image" in accept_header:
+        return Response(content=TRANSPARENT_PNG, media_type="image/png")
+    return JSONResponse(content={"status": "ok"})
+      db.commit()
     finally:
         db.close()
 

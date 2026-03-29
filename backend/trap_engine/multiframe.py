@@ -17,7 +17,7 @@ def get_page_for_archetype(archetype: str, page_path: str) -> str:
     return parts[-1] if parts else "home"
 
 
-def render_multiframe_page(archetype: str, session_id: str, selected_traps: List[str], page_path: str = "/", seed: int = 0, selected_categories: List[str] = None, state: dict = None) -> str:
+def render_multiframe_page(archetype: str, session_id: str, selected_traps: List[str], page_path: str = "/", seed: int = 0, selected_categories: List[str] = None, state: dict = None, base_url: str = None) -> str:
     """Render a multi-page archetype with traps and state persistence."""
     from trap_engine.archetypes_multiframe import (
         render_shopnest_page,
@@ -33,7 +33,10 @@ def render_multiframe_page(archetype: str, session_id: str, selected_traps: List
         render_crypto_page,
         render_realestate_page
     )
-    from trap_engine import inject_category_traps, inject_interactive_traps
+    from trap_engine import inject_category_traps, inject_interactive_traps, BASE_URL
+
+    # Use provided base_url or fallback to global default
+    effective_base_url = base_url or BASE_URL
 
     renderers: Dict[str, Callable] = {
         "ecommerce": render_shopnest_page,
@@ -57,7 +60,7 @@ def render_multiframe_page(archetype: str, session_id: str, selected_traps: List
     if selected_categories:
         category_html = ""
         for cat in selected_categories:
-            category_html += inject_category_traps(session_id, cat, seed, page_path)
+            category_html += inject_category_traps(session_id, cat, seed, page_path, base_url=effective_base_url)
 
         # Inject before </body>
         if "</body>" in html:
@@ -67,9 +70,13 @@ def render_multiframe_page(archetype: str, session_id: str, selected_traps: List
 
     # Inject interactive traps (modals, popups, countdowns, etc.)
     if selected_categories:
-        interactive_html = inject_interactive_traps(session_id, selected_categories, page_path, seed)
+        interactive_html = inject_interactive_traps(session_id, selected_categories, page_path, seed, base_url=effective_base_url)
         if interactive_html and "</body>" in html:
             html = html.replace("</body>", f"{interactive_html}</body>")
+
+    # Final pass: Ensure all absolute links in the HTML match the effective base URL
+    if base_url:
+        html = html.replace("https://agentprobe-backend.onrender.com", base_url.rstrip("/"))
 
     return html
 

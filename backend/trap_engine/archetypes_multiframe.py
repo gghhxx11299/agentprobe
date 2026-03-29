@@ -18,10 +18,10 @@ def _get_page_name(page_path: str) -> str:
 
 def _distribute_traps(all_traps: List[str], page_name: str, num_pages: int, seed: int = 0) -> List[str]:
     if not all_traps: return ["ping"]
-    random.seed(seed + hash(page_name))
+    rng = random.Random(seed + hash(page_name))
     traps_per_page = max(2, len(all_traps) // num_pages)
     shuffled = list(all_traps)
-    random.shuffle(shuffled)
+    rng.shuffle(shuffled)
     result = ["ping"] if "ping" in all_traps else []
     start_idx = (hash(page_name) % len(shuffled))
     for i in range(traps_per_page):

@@ -5,39 +5,6 @@ from sqlalchemy.orm import relationship, declarative_base
 
 Base = declarative_base()
 
-class SessionV3(Base):
-    __tablename__ = "sessions_v3"
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    archetype = Column(String, nullable=False)
-    state = Column(JSON, default={})
-    version = Column(Integer, default=1)
-    seed = Column(Integer, default=0)
-    primary_task = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    signals = relationship("SignalV3", back_populates="session", cascade="all, delete-orphan")
-
-class SignalV3(Base):
-    __tablename__ = "signals_v3"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    session_id = Column(String, ForeignKey("sessions_v3.id"), nullable=False)
-    trap_id = Column(String, nullable=False)
-    category = Column(String, nullable=False)
-    signal_type = Column(String, nullable=False) # triggered/identified/control/stale_interaction
-    
-    # INTENT CAPTURE (V3 Fix)
-    reasoning = Column(Text, nullable=True) 
-    
-    method = Column(String, default="GET")
-    path = Column(String)
-    user_agent = Column(String)
-    request_headers = Column(JSON, default={})
-    triggered_at = Column(DateTime, default=datetime.utcnow)
-    confidence = Column(Integer, default=100)
-    session = relationship("SessionV3", back_populates="signals")
-
-# ── LEGACY V2 MODELS ────────────────────────────
-
 class Session(Base):
     __tablename__ = "sessions"
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -50,14 +17,26 @@ class Session(Base):
     difficulty = Column(String, nullable=False, default="medium")
     seed = Column(Integer, nullable=False, default=0)
     campaign_id = Column(String, nullable=True)
+    
+    # v3: Optimistic Locking & State Tracking
+    version = Column(Integer, default=1)
+    state = Column(JSON, default={})
+    last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    signals = relationship("Signal", back_populates="session", cascade="all, delete-orphan")
 
-class AnalyticsLog(Base):
-    __tablename__ = "analytics_logs"
+class Signal(Base):
+    __tablename__ = "signals"
     id = Column(Integer, primary_key=True, autoincrement=True)
     session_id = Column(String, ForeignKey("sessions.id"), nullable=False)
-    event_type = Column(String, nullable=True)
-    category = Column(String, nullable=True)
-    signal_type = Column(String, nullable=False, default="triggered")
+    event_type = Column(String, nullable=True) # e.g. "honeypot_link"
+    category = Column(String, nullable=True) # e.g. "instruction_following"
+    signal_type = Column(String, nullable=False, default="triggered") # triggered/identified/control/stale_interaction
+    
+    # v3: Intent Capture & Context
+    reasoning = Column(Text, nullable=True) 
+    version_at_trigger = Column(Integer, nullable=True)
+    
     tier = Column(Integer, nullable=False, default=1)
     severity = Column(String, nullable=False, default="medium")
     triggered_at = Column(DateTime, default=datetime.utcnow)
@@ -65,6 +44,8 @@ class AnalyticsLog(Base):
     confidence = Column(Integer, nullable=False, default=100)
     trigger_source = Column(String, nullable=False, default="load")
     time_to_trigger = Column(Integer, nullable=False, default=0)
+    
+    session = relationship("Session", back_populates="signals")
 
 class SessionState(Base):
     __tablename__ = "session_states"
@@ -80,22 +61,6 @@ class CampaignSession(Base):
     campaign_id = Column(String, nullable=False)
     session_number = Column(Integer, nullable=False)
     session_id = Column(String, ForeignKey("sessions.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-class AnalysisResult(Base):
-    __tablename__ = "analysis_results"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    session_id = Column(String, ForeignKey("sessions.id"), nullable=False)
-    raw_output = Column(Text, nullable=False)
-    response_mode = Column(String, nullable=False)
-    elements_identified = Column(Text, nullable=False)
-    elements_acted_on = Column(Text, nullable=False)
-    elements_ignored = Column(Text, nullable=False)
-    self_awareness_score = Column(Integer, nullable=False)
-    self_awareness_explanation = Column(Text, nullable=True)
-    key_finding = Column(Text, nullable=True)
-    recommendation = Column(Text, nullable=True)
-    vulnerability_profile = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class LeaderboardEntry(Base):

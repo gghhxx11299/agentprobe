@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
@@ -66,25 +66,25 @@ def select_trap_for_difficulty(trap_name: str, difficulty: str) -> bool:
 
 
 @router.post("/create", response_model=SessionCreateResponse)
-async def create_session(request: SessionCreateRequest):
+async def create_session(request: Request, session_request: SessionCreateRequest):
     from database import SessionLocal
     from models import Session as SessionModel
 
     session_id = str(uuid.uuid4())
-    seed = generate_seed()
-    random.seed(seed)
+    seed = session_request.seed if hasattr(session_request, 'seed') and session_request.seed else random.randint(0, 2**31 - 1)
+    rng = random.Random(seed)
     
     # Handle mode selection
-    mode = request.mode or "shotgun"
-    difficulty = request.difficulty or "medium"
-    archetype = request.archetype or random.choice(["ecommerce", "saas", "banking", "government"])
+    mode = session_request.mode or "shotgun"
+    difficulty = session_request.difficulty or "medium"
+    archetype = session_request.archetype or rng.choice(["ecommerce", "saas", "banking", "government"])
     
     # v2: Handle categories and primary task
-    selected_categories = request.selected_categories or []
-    primary_task = request.primary_task
+    selected_categories = session_request.selected_categories or []
+    primary_task = session_request.primary_task
 
     # v1 legacy support
-    selected_traps = request.selected_traps or []
+    selected_traps = session_request.selected_traps or []
 
     # CONTROL MODE: No traps, no categories - baseline testing
     if mode == "control":
@@ -94,15 +94,14 @@ async def create_session(request: SessionCreateRequest):
     # Select traps based on mode
     elif mode == "sniper":
         if selected_categories:
-            selected_categories = [random.choice(selected_categories)]
+            selected_categories = [rng.choice(selected_categories)]
         if selected_traps:
-            selected_traps = [random.choice(selected_traps)]
+            selected_traps = [rng.choice(selected_traps)]
     elif mode == "blind":
         if selected_categories:
-            random.shuffle(selected_categories)
-            selected_categories = selected_categories[:2]
-    
-    random.seed()  # Reset random state
+            shuffled = list(selected_categories)
+            rng.shuffle(shuffled)
+            selected_categories = shuffled[:2]
     
     db = SessionLocal()
     try:
@@ -123,8 +122,9 @@ async def create_session(request: SessionCreateRequest):
     finally:
         db.close()
 
-    from trap_engine import BASE_URL
-    target_url = f"{BASE_URL}/test/{session_id}"
+    # v3: Dynamic target URL based on request host
+    base_url = str(request.base_url).rstrip("/")
+    target_url = f"{base_url}/test/{session_id}"
 
     return SessionCreateResponse(
         session_id=session_id,
@@ -139,7 +139,7 @@ async def create_session(request: SessionCreateRequest):
 
 
 @router.post("/campaign", response_model=CampaignCreateResponse)
-async def create_campaign(request: SessionCreateRequest):
+async def create_campaign(request: Request, session_request: SessionCreateRequest):
     """Create a campaign with 5 linked sessions, one trap per session."""
     from database import SessionLocal
     from models import Session as SessionModel, CampaignSession as CampaignSessionModel
@@ -148,12 +148,12 @@ async def create_campaign(request: SessionCreateRequest):
     seed = generate_seed()
     random.seed(seed)
     
-    archetype = request.archetype or random.choice(["ecommerce", "saas", "banking", "government"])
-    difficulty = request.difficulty or "medium"
-    primary_task = request.primary_task
+    archetype = session_request.archetype or random.choice(["ecommerce", "saas", "banking", "government"])
+    difficulty = session_request.difficulty or "medium"
+    primary_task = session_request.primary_task
     
     # Select categories/traps for campaign
-    shuffled_items = (request.selected_categories or request.selected_traps or []).copy()
+    shuffled_items = (session_request.selected_categories or session_request.selected_traps or []).copy()
     random.shuffle(shuffled_items)
     campaign_items = shuffled_items[:5]
     
@@ -164,6 +164,9 @@ async def create_campaign(request: SessionCreateRequest):
     session_ids = []
     target_urls = []
     
+    # v3: Dynamic base URL
+    base_url = str(request.base_url).rstrip("/")
+    
     db = SessionLocal()
     try:
         for i, item in enumerate(campaign_items):
@@ -171,7 +174,7 @@ async def create_campaign(request: SessionCreateRequest):
             session_seed = seed + i
             
             # Check if item is category or trap
-            is_category = request.selected_categories and item in request.selected_categories
+            is_category = session_request.selected_categories and item in session_request.selected_categories
             
             session = SessionModel(
                 id=session_id,
@@ -197,7 +200,7 @@ async def create_campaign(request: SessionCreateRequest):
             db.add(campaign_session)
             
             session_ids.append(session_id)
-            target_urls.append(f"{BASE_URL}/test/{session_id}")
+            target_urls.append(f"{base_url}/test/{session_id}")
         
         db.commit()
     finally:
@@ -218,7 +221,7 @@ async def create_campaign(request: SessionCreateRequest):
 
 
 @router.post("/retest/{session_id}")
-async def retest_session(session_id: str):
+async def retest_session(request: Request, session_id: str):
     """Create a new session with the same seed and config for retesting."""
     from database import SessionLocal
     from models import Session as SessionModel
@@ -246,10 +249,10 @@ async def retest_session(session_id: str):
         db.add(session)
         db.commit()
         
-        from trap_engine import BASE_URL
+        base_url = str(request.base_url).rstrip("/")
         return {
             "session_id": new_session_id,
-            "target_url": f"{BASE_URL}/test/{new_session_id}",
+            "target_url": f"{base_url}/test/{new_session_id}",
             "archetype": original.archetype,
             "mode": original.mode,
             "difficulty": original.difficulty,
