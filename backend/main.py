@@ -51,25 +51,28 @@ app.include_router(debug.router, prefix="/debug", tags=["debug"])
 app.include_router(state.router, prefix="/state", tags=["state"])
 
 # ── VERSIONED ROUTERS ───────────────────────────────
-app.include_router(v2.router)
-app.include_router(v3.router)
+app.include_router(v2.router) # /v2/test/...
+app.include_router(v3.router) # /v3/test/...
 
 @app.get("/health")
 def health():
     return {"status": "all_systems_go", "v2": "active", "v3": "active"}
 
-# FIX: Correct redirect for single-parameter test URLs
+# FIX: Correct redirect for single-parameter test URLs with deep paths
+@app.get("/test/{session_id}/{path:path}")
 @app.get("/test/{session_id}")
-async def session_redirect(session_id: str, db: Session = Depends(get_db)):
+async def session_redirect(session_id: str, request: Request, db: Session = Depends(get_db)):
     session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
     if not session:
         return HTMLResponse("<h1>Session Not Found</h1>", status_code=404)
-    # Redirect to the v2 test page which handles the old engine
-    return RedirectResponse(url=f"/v2/test/{session_id}/{session.archetype}")
-
-@app.get("/test/{session_id}/{archetype}")
-async def legacy_redirect(session_id: str, archetype: str):
-    return RedirectResponse(url=f"/v2/test/{session_id}/{archetype}")
+    
+    # Get the sub-path if it exists
+    full_path = request.url.path
+    sub_path = full_path.replace(f"/test/{session_id}", "", 1)
+    if sub_path and not sub_path.startswith("/"):
+        sub_path = "/" + sub_path
+        
+    return RedirectResponse(url=f"/v2/test/{session_id}/{session.archetype}{sub_path}")
 
 @app.get("/")
 def read_root():
